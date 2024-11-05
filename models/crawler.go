@@ -11,8 +11,8 @@ import (
 )
 
 type Crawler interface {
-	getTargets() ([]*Advertisement, error)
-	getDetails(*Advertisement)
+	GetTargets() ([]*Advertisement, error)
+	GetDetails(*Advertisement)
 } // TODO types should be added after ad structs are finished
 
 type CrawlerAbstract struct {
@@ -23,7 +23,7 @@ type CrawlerAbstract struct {
 }
 
 func (c *CrawlerAbstract) Start() {
-	Ads, err := c.Crawler.getTargets()
+	Ads, err := c.Crawler.GetTargets()
 
 	if err != nil {
 		log.Fatal("CRAWLER ERROR", err)
@@ -32,7 +32,7 @@ func (c *CrawlerAbstract) Start() {
 
 	for _, ad := range Ads {
 		c.Wg.Add(1)
-		go c.Crawler.getDetails(ad)
+		go c.Crawler.GetDetails(ad)
 
 		randomSleep := rand.Intn(50) + 2 // To prevent rate-limits
 		time.Sleep(time.Second * time.Duration(randomSleep))
