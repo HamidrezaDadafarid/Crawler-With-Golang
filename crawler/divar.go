@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-
+	"main/models"
 	"github.com/gocolly/colly"
 )
 
