@@ -1,45 +1,50 @@
 package models
 
 import (
+	"log"
 	"sync"
+	"time"
+
+	"math/rand"
+
+	"github.com/gocolly/colly"
 )
 
-type ICrawler interface {
-	getTargets() //([]*Advertisement, error)
-	getDetails() // ([]*Advertisement, error)
-	validateJSON()
-	sendDataToDB() // []*Advertisement // OR JSON
-	Start()
+type Crawler interface {
+	getTargets() ([]*Advertisement, error)
+	getDetails(*Advertisement)
 } // TODO types should be added after ad structs are finished
 
-type Crawler struct {
-	page int
-	wg   *sync.WaitGroup
+type CrawlerAbstract struct {
+	Page      int
+	Wg        *sync.WaitGroup
+	Collector *colly.Collector
+	Crawler   Crawler
 }
 
-func (c *Crawler) getTargets() {
+func (c *CrawlerAbstract) Start() {
+	Ads, err := c.Crawler.getTargets()
 
-}
+	if err != nil {
+		log.Fatal("CRAWLER ERROR", err)
+		return
+	}
 
-func (c *Crawler) getDetails() {
+	for _, ad := range Ads {
+		c.Wg.Add(1)
+		go c.Crawler.getDetails(ad)
 
-}
-
-func (c *Crawler) sendDataToDB() {
-	// THIS IS THE SAME FOR ALL CRAWLERS
-}
-
-func (c *Crawler) validateJSON() {
-	// DONE LATER
-}
-
-func (c *Crawler) Start() {
-	c.getTargets()
-	c.getDetails()
+		randomSleep := rand.Intn(50) + 2 // To prevent rate-limits
+		time.Sleep(time.Second * time.Duration(randomSleep))
+	}
 	c.validateJSON()
 	c.sendDataToDB()
 }
 
-func NewCrawler(pg int, waitGroup *sync.WaitGroup) *Crawler {
-	return &Crawler{page: pg, wg: waitGroup}
+func (c *CrawlerAbstract) sendDataToDB() {
+
+}
+
+func (b *CrawlerAbstract) validateJSON() {
+
 }
