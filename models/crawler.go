@@ -11,7 +11,7 @@ import (
 )
 
 type Crawler interface {
-	GetTargets() ([]*Advertisement, error)
+	GetTargets(page int, collector *colly.Collector) ([]*Advertisement, error)
 	GetDetails(*Advertisement)
 } // TODO types should be added after ad structs are finished
 
@@ -23,7 +23,7 @@ type CrawlerAbstract struct {
 }
 
 func (c *CrawlerAbstract) Start() {
-	Ads, err := c.Crawler.GetTargets()
+	Ads, err := c.Crawler.GetTargets(c.Page, c.Collector)
 
 	if err != nil {
 		log.Fatal("CRAWLER ERROR", err)

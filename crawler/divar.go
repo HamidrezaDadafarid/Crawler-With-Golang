@@ -14,7 +14,7 @@ const url string = "https://divar.ir/s/iran/real-estate?page=%d"
 type Advertisement = models.Advertisement
 
 type divar struct {
-	models.CrawlerAbstract
+	*models.CrawlerAbstract
 }
 
 func NewDivarCrawler(page int, wg *sync.WaitGroup, col *colly.Collector) *models.CrawlerAbstract {
@@ -27,10 +27,9 @@ func NewDivarCrawler(page int, wg *sync.WaitGroup, col *colly.Collector) *models
 	return &d
 }
 
-func (c *divar) GetTargets() ([]*Advertisement, error) {
+func (c *divar) GetTargets(page int, collector *colly.Collector) ([]*Advertisement, error) {
 	var Ads []*Advertisement
-	fmt.Println("gg")
-	c.Collector.OnHTML("a[href]", func(h *colly.HTMLElement) {
+	collector.OnHTML("a[href]", func(h *colly.HTMLElement) {
 		// Checks if the attribute class is same with the given class
 		// This class is for post link
 		if h.Attr("class") == "kt-post-card__action" {
@@ -38,11 +37,11 @@ func (c *divar) GetTargets() ([]*Advertisement, error) {
 			Ads = append(Ads, &Advertisement{Link: link}) // Creates an Ad and adds a link to it
 		}
 	})
-	fmt.Println("g")
-	c.Collector.OnRequest(func(r *colly.Request) {
+
+	collector.OnRequest(func(r *colly.Request) {
 		log.Println("GRABBED TARGETS FROM: ", r.URL) // logs the request url
 	})
-	c.Collector.Visit(fmt.Sprintf(url, c.Page)) // Starts sending request
+	collector.Visit(fmt.Sprintf(url, page)) // Starts sending request
 
 	return Ads, nil
 }

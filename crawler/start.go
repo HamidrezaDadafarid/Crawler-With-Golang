@@ -1,14 +1,13 @@
-package main
+package crawler
 
 import (
 	"fmt"
-	"main/crawler"
 	"sync"
 
 	"github.com/gocolly/colly"
 )
 
-func main() {
+func StartCrawler() {
 	var (
 		page      int
 		waitGroup sync.WaitGroup
@@ -19,8 +18,7 @@ func main() {
 	)
 	fmt.Scanf("%d", page)
 
-	divarCrawler := crawler.NewDivarCrawler(page, &waitGroup, collyInstance)
-	
+	divarCrawler := NewDivarCrawler(page, &waitGroup, collyInstance)
 	divarCrawler.Start()
 
 }
