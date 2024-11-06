@@ -20,6 +20,7 @@ type CrawlerAbstract struct {
 }
 
 func (c *CrawlerAbstract) Start() {
+	defer c.Collector.Close()
 	Ads := c.Crawler.GetTargets(c.Page, c.Collector)
 
 	for i := 0; i < len(Ads); i++ {

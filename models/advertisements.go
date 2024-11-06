@@ -5,13 +5,13 @@ type Advertisement struct {
 	UniqueID       string
 	Title          string
 	Desc           string
+	TypeOfAd       string
 	Price          string
 	City           string
 	Neighbourhood  string
-	Surface        string
-	TypeOfAd       string
+	Surface        int
 	RoomsCount     int
-	Age            int
+	YearOfBuild    int
 	TypeOfProperty string
 	Warehouse      bool
 	Elevator       bool

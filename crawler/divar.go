@@ -59,8 +59,61 @@ func (c *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 	}
 
 	log.Println("SUCCESS FOR GRABBING")
-
+	collector.Close()
 	return Ads
+}
+
+func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
+	defer wg.Done()
+	collector := bInstance.MustPage("https://divar.ir/v" + ad.UniqueID)
+
+	collector.WaitStable(10)
+
+	ad.Title = collector.MustElement("h1").MustWaitVisible().MustText()
+
+	ad.Desc = collector.MustElement(`p.kt-description-row__text.kt-description-row__text--primary`).MustWaitVisible().MustText()
+
+	if surface, err := getSurface(collector); err != nil {
+		ad.Surface = surface
+	}
+
+	ok, _, _ := collector.HasR(`td`, `^\u0627\u0646\u0628\u0627\u0631\u06cc$`) // checks for warehouse
+
+	ad.Warehouse = ok
+
+	ok, _, _ = collector.HasR(`td`, `^\u0622\u0633\u0627\u0646\u0633\u0648\u0631$`) // checks for elevator
+
+	ad.Elevator = ok
+
+	ok, _, _ = collector.HasR(`a.kt-breadcrumbs__action`, `\u0622\u067e\u0627\u0631\u062a\u0645\u0627\u0646`) //  checks for property type
+
+	if ok {
+		ad.TypeOfProperty = "apartment"
+	} else {
+		ad.TypeOfProperty = "villa"
+	}
+
+	getLocation(ad, collector)
+
+	fmt.Println(ad)
+}
+
+func getSurface(collector *rod.Page) (int, error) {
+	if ok, section, _ := collector.Has(`kt-group-row`); ok {
+
+		if _, err := section.ElementR("span", "متراژ"); err != nil {
+			return -1, errors.New("no surface")
+		}
+
+		surface := section.MustElement(`td.kt-group-row-item.kt-group-row-item__value.kt-group-row-item--info-row`).MustText()
+
+		if s, err := strconv.Atoi(surface); err == nil {
+			return s, nil
+		}
+
+		return -1, errors.New("couldn't convert to int")
+	}
+	return -1, errors.New("no surface")
 }
 
 func getLatitudeAndLongitude(a string) (float64, float64) {
@@ -71,7 +124,7 @@ func getLatitudeAndLongitude(a string) (float64, float64) {
 
 	if errlat != nil || errlong != nil {
 		log.Println(`FAILED TO CONVERT TO LATITUDE OR LONGTITUDE\nLINK:` + a)
-		return lat, long
+		return -1, -1
 	}
 	return lat, long
 }
@@ -86,17 +139,4 @@ func getLocation(ad *Advertisement, collector *rod.Page) error {
 		return nil
 	}
 	return errors.New("This ad has no location!")
-}
-
-func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
-	defer wg.Done()
-	collector := bInstance.MustPage("https://divar.ir/v" + ad.UniqueID)
-
-	collector.WaitStable(5)
-
-	ad.Title = collector.MustElement("h1").MustWaitVisible().MustText()
-
-	getLocation(ad, collector)
-
-	fmt.Println(ad)
 }
