@@ -1,24 +1,18 @@
 package crawler
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/gocolly/colly"
+	"github.com/go-rod/rod"
 )
 
-func StartCrawler() {
+func StartCrawler(page int) {
 	var (
-		page      int
-		waitGroup sync.WaitGroup
+		waitGroup   sync.WaitGroup
+		rodInstance *rod.Browser = rod.New().MustConnect().Trace(true)
 	)
 
-	collyInstance := colly.NewCollector(
-		colly.CacheDir("./crawler/cache"),
-	)
-	fmt.Scanf("%d", page)
-
-	divarCrawler := NewDivarCrawler(page, &waitGroup, collyInstance)
+	divarCrawler := NewDivarCrawler(page, &waitGroup, rodInstance)
 	divarCrawler.Start()
 
 }
