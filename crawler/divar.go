@@ -7,6 +7,7 @@ import (
 	"main/models"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-rod/rod"
@@ -73,10 +74,6 @@ func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 
 	ad.Desc = collector.MustElement(`p.kt-description-row__text.kt-description-row__text--primary`).MustWaitVisible().MustText()
 
-	if surface, err := getSurface(collector); err != nil {
-		ad.Surface = surface
-	}
-
 	ok, _, _ := collector.HasR(`td`, `^\u0627\u0646\u0628\u0627\u0631\u06cc$`) // checks for warehouse
 
 	ad.Warehouse = ok
@@ -93,27 +90,58 @@ func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 		ad.TypeOfProperty = "villa"
 	}
 
+	surface, year, rooms := getSurfaceAndYearAndRooms(collector)
+
+	ad.Surface = surface
+	ad.YearOfBuild = year
+	ad.RoomsCount = rooms
+
 	getLocation(ad, collector)
 
 	fmt.Println(ad)
 }
 
-func getSurface(collector *rod.Page) (int, error) {
-	if ok, section, _ := collector.Has(`kt-group-row`); ok {
+func changeFarsiToEng(a string) int {
+	runesOfString := []rune(a)
+	var res []rune
 
-		if _, err := section.ElementR("span", "متراژ"); err != nil {
-			return -1, errors.New("no surface")
-		}
-
-		surface := section.MustElement(`td.kt-group-row-item.kt-group-row-item__value.kt-group-row-item--info-row`).MustText()
-
-		if s, err := strconv.Atoi(surface); err == nil {
-			return s, nil
-		}
-
-		return -1, errors.New("couldn't convert to int")
+	for i := range runesOfString {
+		res = append(res, runesOfString[i]-1728)
 	}
-	return -1, errors.New("no surface")
+
+	val, err := strconv.Atoi(string(res))
+
+	if err != nil {
+		val = -1
+	}
+
+	return val
+}
+
+func getSurfaceAndYearAndRooms(collector *rod.Page) (int, int, int) {
+
+	conds := map[string]int{`متراژ`: -1, `ساخت`: -1, `اتاق`: -1}
+
+	section := collector.MustElement(`table.kt-group-row`)
+	all := strings.Split(section.MustText(), "\n")
+
+	// covers every single condition that happens.
+	for key, _ := range conds {
+
+		for i := 0; i < len(all)/2; i++ {
+
+			if key == all[i] {
+				conds[key] = changeFarsiToEng(all[i+len(all)/2])
+			}
+
+		}
+	}
+
+	surface := conds[`متراژ`]
+	rooms := conds[`اتاق`]
+	year := conds[`ساخت`]
+
+	return surface, year, rooms
 }
 
 func getLatitudeAndLongitude(a string) (float64, float64) {

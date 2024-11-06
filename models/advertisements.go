@@ -6,13 +6,13 @@ type Advertisement struct {
 	Title          string
 	Desc           string
 	TypeOfAd       string
-	Price          string
-	City           string
+	City           string  
 	Neighbourhood  string
+	TypeOfProperty string
+	Price          int
 	Surface        int
 	RoomsCount     int
 	YearOfBuild    int
-	TypeOfProperty string
 	Warehouse      bool
 	Elevator       bool
 	Latitude       float64
