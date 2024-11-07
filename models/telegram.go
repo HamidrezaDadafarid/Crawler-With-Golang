@@ -3,11 +3,10 @@ package models
 import (
 	"fmt"
 	"log"
+	"main/utils"
 	"strconv"
 	"strings"
 	"time"
-
-	"main/utils"
 
 	"gopkg.in/telebot.v4"
 )
@@ -22,35 +21,39 @@ type Telegram struct {
 }
 
 var (
-	startMenu            = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnLoginAsSuperAdmin = startMenu.Text("Login As Super Admin")
-	btnLoginAsAdmin      = startMenu.Text("Login As Admin")
-	btnLoginAsUser       = startMenu.Text("Login As User")
+	superAdminMenu       = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnAddAdmin          = superAdminMenu.Text("اضافه کردن ادمین")
+	btnManageAdmins      = superAdminMenu.Text("مدیریت کردن ادمین ها")
+	btnSetNumberOfAds    = superAdminMenu.Text("تنظیم تعداد آیتم های جستجو شده")
+	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
+
+	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnSeeCrawlDetails = superAdminMenu.Text("See Crawl Details")
 
 	userMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnSetFilters     = userMenu.Text("Set Filters")
-	btnShareBookmarks = userMenu.Text("Share Bookmarks")
-	btnGetOutputFile  = userMenu.Text("Get Output File")
-	btnDeleteHistory  = userMenu.Text("Detele History")
+	btnSetFilters     = userMenu.Text("ثبت فیلتر")
+	btnShareBookmarks = userMenu.Text("اشتراک گذاری آگهی های مورد علاقه")
+	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
+	btnDeleteHistory  = userMenu.Text("پاک کردن تاریخچه")
 
 	filterMenu       = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnPrice         = filterMenu.Text("Price")
-	btnCity          = filterMenu.Text("City")
-	btnNeighborhood  = filterMenu.Text("Neighborhood")
-	btnArea          = filterMenu.Text("Area")
-	btnNumberOfRooms = filterMenu.Text("Number Of Rooms")
-	btnCategoryPMR   = filterMenu.Text("Purchase, Mortgage, Rent Category")
-	btnAge           = filterMenu.Text("Age")
-	btnCategoryAV    = filterMenu.Text("Apartment Or Villa Category")
-	btnFloorNumber   = filterMenu.Text("Floor Number")
-	btnStorage       = filterMenu.Text("Storage")
-	btnElevator      = filterMenu.Text("Elevator")
-	btnAdDate        = filterMenu.Text("Ad Date")
-	btnSendFilter    = filterMenu.Text("Send Filter")
+	btnPrice         = filterMenu.Text("قیمت")
+	btnCity          = filterMenu.Text("شهر")
+	btnNeighborhood  = filterMenu.Text("محله")
+	btnArea          = filterMenu.Text("متراژ")
+	btnNumberOfRooms = filterMenu.Text("تعداد اتاق خواب")
+	btnCategoryPMR   = filterMenu.Text("خرید یا اجاره؟")
+	btnAge           = filterMenu.Text("سن بنا")
+	btnCategoryAV    = filterMenu.Text("ویلایی یا آپارتمانی؟")
+	btnFloorNumber   = filterMenu.Text("طبقه")
+	btnStorage       = filterMenu.Text("انباری")
+	btnElevator      = filterMenu.Text("آسانسور")
+	btnAdDate        = filterMenu.Text("تاریخ ایجاد آگهی")
+	btnSendFilter    = filterMenu.Text("ثبت فیلتر")
 
 	getOutputFileMenu = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnGetAsZip       = getOutputFileMenu.Text("Get Ads As Zip File")
-	btnGetViaEmail    = getOutputFileMenu.Text("Get Ads Via Email")
+	btnGetAsZip       = getOutputFileMenu.Text("دریافت آگهی ها به صورت فایل زیپ")
+	btnGetViaEmail    = getOutputFileMenu.Text("دریافت آگهی ها از طریق ایمیل")
 )
 
 func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
@@ -73,8 +76,8 @@ func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
 }
 
 func (t *Telegram) registerHandlers() {
-	t.Bot.Handle(telebot.OnText, t.handleText)
 	t.Bot.Handle("/start", t.handleStart)
+	t.Bot.Handle(telebot.OnText, t.handleText)
 }
 
 func (t *Telegram) Start() {
@@ -83,45 +86,53 @@ func (t *Telegram) Start() {
 	t.Bot.Start()
 }
 
-func (t *Telegram) handleStart(c telebot.Context) error {
-	welcomeMsg := "Welcome To The Real Estate Bot."
+func (t *Telegram) handleStart(c telebot.Context) (err error) {
+	welcomeMsg := "به ربات خزنده خوش اومدین :)"
+	// TODO
+	// get user's role with this telegram id from database
+	// telegram_ID := c.Sender().ID
+	// role := SELECT role FROM users WHERE telegram_ID = telegram_ID
+	role := "user"
+	if role == "user" {
+		userMenu.Reply(
+			userMenu.Row(btnSetFilters, btnShareBookmarks),
+			userMenu.Row(btnGetOutputFile, btnDeleteHistory),
+		)
 
-	startMenu.Reply(
-		startMenu.Row(btnLoginAsSuperAdmin, btnLoginAsAdmin, btnLoginAsUser),
-	)
+		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
+		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
+		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
 
-	t.Bot.Handle(&btnLoginAsSuperAdmin, t.handleLoginSuperAdmin)
-	t.Bot.Handle(&btnLoginAsAdmin, t.handleLoginAdmin)
-	t.Bot.Handle(&btnLoginAsUser, t.handleLoginUser)
+		err = c.Send(welcomeMsg, userMenu)
 
-	return c.Send(welcomeMsg, startMenu)
+	} else if role == "admin" {
+		adminMenu.Reply(
+			adminMenu.Row(btnSeeCrawlDetails),
+		)
+
+		t.Bot.Handle(&btnSeeCrawlDetails, t.handleSeeCrawlDetails)
+
+		err = c.Send(welcomeMsg, adminMenu)
+
+	} else {
+		superAdminMenu.Reply(
+			superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
+			superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+		)
+
+		t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
+		t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
+		t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
+		t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+
+		err = c.Send(welcomeMsg, superAdminMenu)
+	}
+	return
 }
 
-// TODO
-func (t *Telegram) handleLoginSuperAdmin(c telebot.Context) error {
-	return nil
-}
-
-// TODO
-func (t *Telegram) handleLoginAdmin(c telebot.Context) error {
-	return nil
-}
-
-func (t *Telegram) handleLoginUser(c telebot.Context) error {
-	userMenu.Reply(
-		userMenu.Row(btnSetFilters, btnShareBookmarks),
-		userMenu.Row(btnGetOutputFile, btnDeleteHistory),
-	)
-
-	t.Bot.Handle(&btnSetFilters, t.handleFilters)
-	t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
-	t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
-	t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
-
-	return c.Send("Please select an item", userMenu)
-}
-
-func (t *Telegram) handleFilters(c telebot.Context) error {
+// User menu handlers
+func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	session := GetUserSession(c.Chat().ID)
 	session.State = "selecting_filter"
 
@@ -133,120 +144,172 @@ func (t *Telegram) handleFilters(c telebot.Context) error {
 		filterMenu.Row(btnSendFilter),
 	)
 
-	t.Bot.Handle(&btnPrice, func(c telebot.Context) error {
-		_, existsMin := session.Filters["min_price"]
-		_, existsMax := session.Filters["max_price"]
-		if existsMin || existsMax {
-			return c.Send("Price range is already set.", filterMenu)
+	t.Bot.Handle(&btnPrice, func(c telebot.Context) (err error) {
+		if _, exists := session.Filters["Category_PR"]; !exists {
+			err = c.Send("لطفا قبل از تعیین بازه قیمت، فیلتر خرید یا اجاره را تعیین کنید")
+			return
 		}
-		session.State = "setting_price_range"
-		return c.Send("Please enter the price range (e.g., 100000-500000)")
+
+		if category, _ := session.Filters["category_PR"]; category == "purchase" {
+			_, existsMin := session.Filters["purchase_min_price"]
+			_, existsMax := session.Filters["purchase_max_price"]
+			if existsMin || existsMax {
+				err = c.Send("بازه قیمت خرید قبلا مشخص شده است", filterMenu)
+				return
+			}
+
+			session.State = "setting_purchase_price_range"
+			err = c.Send("لطفا بازه قیمت خود را وارد کنید: (مثال: 1000-100)")
+			return
+		} else {
+			_, existsMin := session.Filters["rent_min_price"]
+			_, existsMax := session.Filters["rent_max_price"]
+			if existsMin || existsMax {
+				err = c.Send("بازه قیمت اجاره قبلا مشخص شده است", filterMenu)
+				return
+			}
+			session.State = "setting_rent_price_range"
+			err = c.Send("لطفا بازه قیمت خود را وارد کنید: (مثال: 1000-100)")
+			return
+		}
+
 	})
 
-	t.Bot.Handle(&btnCity, func(c telebot.Context) error {
+	t.Bot.Handle(&btnCity, func(c telebot.Context) (err error) {
 		if _, existsCity := session.Filters["city"]; existsCity {
-			return c.Send("City is already set.", filterMenu)
+			err = c.Send("شهر قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_city"
-		return c.Send("Please enter the city name:")
+		err = c.Send("لطفا نام شهر را وارد کنید")
+		return
 	})
 
-	t.Bot.Handle(&btnNeighborhood, func(c telebot.Context) error {
+	t.Bot.Handle(&btnNeighborhood, func(c telebot.Context) (err error) {
 		if _, existsNeighborhood := session.Filters["neighborhood"]; existsNeighborhood {
-			return c.Send("Neighborhood is already set.", filterMenu)
+			err = c.Send("محله قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_neighborhood"
-		return c.Send("Please enter the neighborhood name")
+		err = c.Send("لطفا نام محله را وارد کنید", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnArea, func(c telebot.Context) error {
+	t.Bot.Handle(&btnArea, func(c telebot.Context) (err error) {
 		_, existsMin := session.Filters["min_area"]
 		_, existsMax := session.Filters["max_area"]
 		if existsMin || existsMax {
-			return c.Send("Area range is already set.", filterMenu)
+			err = c.Send("بازه متراژ قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_area"
-		return c.Send("Please enter the area range (e.g 100-150)")
+		err = c.Send("لطفا بازه متراژ را وارد کنید (مثال: 120-100)", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnNumberOfRooms, func(c telebot.Context) error {
+	t.Bot.Handle(&btnNumberOfRooms, func(c telebot.Context) (err error) {
 		_, existsMin := session.Filters["min_number_of_rooms"]
 		_, existsMax := session.Filters["max_number_of_rooms"]
 		if existsMin || existsMax {
-			return c.Send("Number of rooms range is already set.", filterMenu)
+			err = c.Send("بازه تعداد اتاق خواب قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_number_of_rooms"
-		return c.Send("Please enter the number of rooms range (e.g 1-3)")
+		err = c.Send("لطفا بازه تعداد اتاق خواب را وارد کنید (مثال: 3-1)", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnCategoryPMR, func(c telebot.Context) error {
+	t.Bot.Handle(&btnCategoryPMR, func(c telebot.Context) (err error) {
 		if _, existsCategory := session.Filters["category_PMR"]; existsCategory {
-			return c.Send("Category is already set.", filterMenu)
+			err = c.Send("این دسته بندی قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_category_PMR"
-		return c.Send("Please enter the category (purchase, mortgage or rent)")
+		err = c.Send("خرید یا اجاره؟", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnAge, func(c telebot.Context) error {
+	t.Bot.Handle(&btnAge, func(c telebot.Context) (err error) {
 		_, existsMin := session.Filters["min_age"]
 		_, existsMax := session.Filters["max_age"]
 		if existsMin || existsMax {
-			return c.Send("Age range is already set.", filterMenu)
+			err = c.Send("بازه سن بنا قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_age"
-		return c.Send("Please enter the age range (e.g 3-8)")
+		err = c.Send("لطفا بازه سن بنا را وارد کنید (مثال: 10-5)", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnCategoryAV, func(c telebot.Context) error {
+	t.Bot.Handle(&btnCategoryAV, func(c telebot.Context) (err error) {
 		if _, existsCategory := session.Filters["category_AV"]; existsCategory {
-			return c.Send("Category is already set.", filterMenu)
+			err = c.Send("این دسته بندی قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_category_AV"
-		return c.Send("Please enter the category (apartment or villa)")
+		err = c.Send("ویلایی یا آپارتمانی؟", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnFloorNumber, func(c telebot.Context) error {
+	t.Bot.Handle(&btnFloorNumber, func(c telebot.Context) (err error) {
+		if _, exists := session.Filters["Category_AV"]; !exists {
+			err = c.Send("لطفا قبل از تعیین بازه طبقه ویلایی یا آپارتمانی بودن آگهی را تعیین کنید")
+			return
+		}
+		if category, _ := session.Filters["Category_AV"]; category == "villa" {
+			err = c.Send("برای آگهی های ویلایی نمی توان بازه طبقه مشخص کرد")
+			return
+		}
 		_, existsMin := session.Filters["min_floor_number"]
 		_, existsMax := session.Filters["max_floor_number"]
 		if existsMin || existsMax {
-			return c.Send("Floor number range is already set.", filterMenu)
+			err = c.Send("بازه طبقه قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_floor_number"
-		return c.Send("Please enter the floor number range (e.g 1-4)")
+		err = c.Send("لطفا بازه طبقه را وارد کنید (مثال: 2-1)", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnStorage, func(c telebot.Context) error {
+	t.Bot.Handle(&btnStorage, func(c telebot.Context) (err error) {
 		if _, existsStorage := session.Filters["storage"]; existsStorage {
-			return c.Send("Storage is already set.", filterMenu)
+			err = c.Send("داشتن یا نداشتن انباری قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_storage"
-		return c.Send("Please enter whether you want the house to have storage or not (yes or no)")
+		err = c.Send("انباری داتشته باشد یا نه؟ (با بله یا خیر پاسخ دهید)", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnElevator, func(c telebot.Context) error {
+	t.Bot.Handle(&btnElevator, func(c telebot.Context) (err error) {
 		if _, existsElevator := session.Filters["elevator"]; existsElevator {
-			return c.Send("Elevator is already set.", filterMenu)
+			err = c.Send("داشتن یا نداشتن آسانسور قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_elevator"
-		return c.Send("Please enter whether you want the house to have elevator or not (yes or no)")
+		err = c.Send("آسانسور داشته باشد یا نه؟ (با بله یا خیر پاسخ دهید)", filterMenu)
+		return
 	})
 
-	t.Bot.Handle(&btnAdDate, func(c telebot.Context) error {
+	t.Bot.Handle(&btnAdDate, func(c telebot.Context) (err error) {
 		_, existsMin := session.Filters["min_date"]
 		_, existsMax := session.Filters["max_date"]
 		if existsMin || existsMax {
-			return c.Send("Date range is already set.", filterMenu)
+			err = c.Send("بازه تاریخ ایجاد آگهی قبلا مشخص شده است", filterMenu)
+			return
 		}
 		session.State = "setting_ad_date"
-		return c.Send("Please enter the ad date range (e.g 1403-8-10 1403-10-8)")
+		err = c.Send("لطفا بازه تاریخ ایجاد آگهی را وارد کنید (مثال: 01-01-1403  01-01-1402)", filterMenu)
+		return
 	})
 
-	// TODO
-	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) error {
+	// TODO: insert it into database
+	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
 		return nil
 	})
 
-	return c.Send("Select a filter to set", filterMenu)
+	err = c.Send("لطفا یک فیلتر را انتخاب کنید", filterMenu)
+	return
 }
 
 // TODO
@@ -271,30 +334,64 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) error {
 	return nil
 }
 
-func (t *Telegram) handleText(c telebot.Context) error {
+// Admin menu handlers
+// TODO
+func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) error {
+	return nil
+}
+
+// Super admin menu handlers
+// TODO
+func (t *Telegram) handleAddAdmin(c telebot.Context) error {
+	return nil
+}
+
+// TODO
+func (t *Telegram) handleManageAdmins(c telebot.Context) error {
+	return nil
+}
+
+// TODO
+func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) error {
+	return nil
+}
+
+// TODO
+func (t *Telegram) handleSetNumberOfAds(c telebot.Context) error {
+	return nil
+}
+
+func (t *Telegram) handleText(c telebot.Context) (err error) {
 	session := GetUserSession(c.Chat().ID)
 	input := c.Text()
 
 	switch session.State {
 	case "setting_price_range":
-		minPrice, maxPrice, err := utils.ParseRanges(input)
-		if err != nil {
-			return c.Send(fmt.Sprintf("%s. Please try again.", err.Error()))
+		if filter, _ := session.Filters["category_PR"]; filter == "purchase" {
+			// TODO
+		} else {
+			// TODO
 		}
+		minPrice, maxPrice, e := utils.ParseRanges(input)
+		if e != nil {
+			err = c.Send(e.Error())
+			return
+		}
+
 		session.Filters["min_price"] = strconv.Itoa(minPrice)
 		session.Filters["max_price"] = strconv.Itoa(maxPrice)
 		session.State = ""
-		return c.Send("Price range set successfully.", filterMenu)
+		return c.Send("بازه قیمت مورد نظر ثبت شد", filterMenu)
 
 	case "setting_city":
 		session.Filters["city"] = strings.TrimSpace(strings.ToLower(input))
 		session.State = ""
-		return c.Send("City set successfully.", filterMenu)
+		return c.Send("شهر مورد نظر ثبت شد", filterMenu)
 
 	case "setting_neighborhood":
 		session.Filters["neighborhood"] = strings.TrimSpace(strings.ToLower(input))
 		session.State = ""
-		return c.Send("Neighborhood set seccessfully.", filterMenu)
+		return c.Send("محله مورد نظر ثبت شد", filterMenu)
 
 	case "setting_area":
 		minArea, maxArea, err := utils.ParseRanges(input)
@@ -304,7 +401,7 @@ func (t *Telegram) handleText(c telebot.Context) error {
 		session.Filters["min_area"] = strconv.Itoa(minArea)
 		session.Filters["max_area"] = strconv.Itoa(maxArea)
 		session.State = ""
-		return c.Send("Area range set seccessfully.", filterMenu)
+		return c.Send("بازه متراژ مورد نظر ثبت شد", filterMenu)
 
 	case "setting_number_of_rooms":
 		minNumberOfRooms, maxNumberOfRooms, err := utils.ParseRanges(input)
@@ -314,16 +411,16 @@ func (t *Telegram) handleText(c telebot.Context) error {
 		session.Filters["min_number_of_rooms"] = strconv.Itoa(minNumberOfRooms)
 		session.Filters["max_number_of_rooms"] = strconv.Itoa(maxNumberOfRooms)
 		session.State = ""
-		return c.Send("Number of rooms range set seccessfully.", filterMenu)
+		return c.Send("بازه تعداد اتاق خواب مورد نظر ثبت شد", filterMenu)
 
 	case "setting_category_PMR":
 		lowerInput := strings.TrimSpace(strings.ToLower(input))
-		if lowerInput != "purchase" && lowerInput != "mortgage" && lowerInput != "rent" {
-			return c.Send("Invalid category. Please try again.")
+		if lowerInput != "خرید" && lowerInput != "اجاره" {
+			return c.Send("دسته بندی نامعتبر است. لطفا دوباره امتحان کنید")
 		}
 		session.Filters["category_PMR"] = lowerInput
 		session.State = ""
-		return c.Send("category set seccussfully", filterMenu)
+		return c.Send("دسته بندی مورد نظر ثبت شد", filterMenu)
 
 	case "setting_age":
 		minAge, maxAge, err := utils.ParseRanges(input)
@@ -333,16 +430,16 @@ func (t *Telegram) handleText(c telebot.Context) error {
 		session.Filters["min_age"] = strconv.Itoa(minAge)
 		session.Filters["max_age"] = strconv.Itoa(maxAge)
 		session.State = ""
-		return c.Send("Age range set seccessfully.", filterMenu)
+		return c.Send("بازه سن بنا ثبت شد", filterMenu)
 
 	case "setting_category_AV":
 		lowerInput := strings.TrimSpace(strings.ToLower(input))
-		if lowerInput != "apartment" && lowerInput != "villa" {
+		if lowerInput != "آپارتمانی" && lowerInput != "ویلایی" {
 			return c.Send("Invalid category. Please try again.")
 		}
 		session.Filters["category_AV"] = lowerInput
 		session.State = ""
-		return c.Send("category set successfully.", filterMenu)
+		return c.Send("دسته بندی مورد نظر ثبت شد", filterMenu)
 
 	case "setting_floor_number":
 		minFloorNumber, maxFloorNumber, err := utils.ParseRanges(input)
@@ -352,25 +449,25 @@ func (t *Telegram) handleText(c telebot.Context) error {
 		session.Filters["min_floor_number"] = strconv.Itoa(minFloorNumber)
 		session.Filters["max_floor_number"] = strconv.Itoa(maxFloorNumber)
 		session.State = ""
-		return c.Send("Number of floor range set seccessfully.", filterMenu)
+		return c.Send("بازه تعداد طبقه مورد نظر ثبت شد", filterMenu)
 
 	case "setting_storage":
 		lowerInput := strings.TrimSpace(strings.ToLower(input))
-		if lowerInput != "yes" && lowerInput != "no" {
-			return c.Send("Invalid input format. Please try again.")
+		if lowerInput != "بله" && lowerInput != "خیر" {
+			return c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
 		}
 		session.Filters["storage"] = lowerInput
 		session.State = ""
-		return c.Send("Storage set successfully.", filterMenu)
+		return c.Send("ثبت شد", filterMenu)
 
 	case "setting_elevator":
 		lowerInput := strings.TrimSpace(strings.ToLower(input))
-		if lowerInput != "yes" && lowerInput != "no" {
-			return c.Send("Invalid input format. Please try again.")
+		if lowerInput != "بله" && lowerInput != "خیر" {
+			return c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
 		}
 		session.Filters["elevator"] = lowerInput
 		session.State = ""
-		return c.Send("Elevator set successfully.", filterMenu)
+		return c.Send("ثبت شد", filterMenu)
 
 	case "setting_ad_date":
 		minDate, maxDate, err := utils.ParseDateRanges(input)
@@ -380,10 +477,10 @@ func (t *Telegram) handleText(c telebot.Context) error {
 		session.Filters["min_date"] = minDate
 		session.Filters["max_date"] = maxDate
 		session.State = ""
-		return c.Send("Date range set successfully.", filterMenu)
+		return c.Send("بازه تاریخ ثبت آگهی مورد نظر ثبت شد", filterMenu)
 
 	default:
-		return c.Send("Please use the menu to select options.")
+		return c.Send("لطفا از منو آیتم مورد نظر را انتخاب کنید")
 	}
 }
 

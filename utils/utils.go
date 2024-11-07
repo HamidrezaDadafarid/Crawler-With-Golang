@@ -10,21 +10,21 @@ import (
 func ParseRanges(input string) (int, int, error) {
 	parts := strings.Split(input, "-")
 	if len(parts) != 2 {
-		return 0, 0, fmt.Errorf("invalid format")
+		return 0, 0, fmt.Errorf("بازه قیمت باید به صورت دو عدد باشد که با - از هم جدا شده اند. دوباره تلاش کنید")
 	}
 	minValue, err := strconv.Atoi(strings.TrimSpace(parts[0]))
 	if err != nil {
-		return 0, 0, fmt.Errorf("invalid value")
+		return 0, 0, fmt.Errorf("بازه قیمت باید به صورت دو عدد باشد که با - از هم جدا شده اند. دوباره تلاش کنید")
 	}
 	maxValue, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 	if err != nil {
-		return 0, 0, fmt.Errorf("invalid value")
+		return 0, 0, fmt.Errorf("بازه قیمت باید به صورت دو عدد باشد که با - از هم جدا شده اند. دوباره تلاش کنید")
 	}
 	if minValue < 0 || maxValue < 0 {
-		return 0, 0, fmt.Errorf("invalid value")
+		return 0, 0, fmt.Errorf("لطفا اعداد منفی وارد نکنید. دوباره تلاش کنید")
 	}
 	if maxValue < minValue {
-		return 0, 0, fmt.Errorf("invalid range")
+		return 0, 0, fmt.Errorf("عدد دوم بازه باید کوچک تر از عدد اول آن باشد! دوباره تلاش کنید")
 	}
 	return minValue, maxValue, nil
 }
