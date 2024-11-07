@@ -102,7 +102,9 @@ func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 		ad.MortgagePrice = -1
 		ad.RentPrice = -1
 	} else {
-		// FIXED LATER
+		ad.CategoryPMR = `rent`
+		ad.SellPrice = -1
+		// TODO FINISH MORTGAGE & RENT PRICE
 	}
 
 	ad.FloorNumber = getFloor(collector)
@@ -136,12 +138,13 @@ func getSellPrice(collector *rod.Page) int {
 func getFloor(collector *rod.Page) int {
 	if ok, section, _ := collector.HasR(`div.kt-base-row.kt-base-row--large.kt-unexpandable-row`, `\u0637\u0628\u0642\u0647`); ok {
 		floor := section.MustElement(`p.kt-unexpandable-row__value`).MustText()
-		r := regexp.MustCompile(`[\\u06f1-\\u06f9]+`)
+		r := regexp.MustCompile(`[\\u06f1-\\u06f9]+`) // since numbers are persian
 		return changeFarsiToEng(r.FindString(floor))
 	}
 	return -1
 }
 
+// These 2 functions should be merged later. they do the same job
 func getNeighbourhood(collector *rod.Page) string {
 
 	all, _ := getDistricts()
