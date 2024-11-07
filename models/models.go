@@ -8,7 +8,7 @@ import (
 
 type Ads struct {
 	gorm.Model
-	ID            uint
+	ID            uint   `gorm:"primaryKey;autoIncrement"`
 	Link          string `gorm:"unique;not null"`
 	UniqueId      string
 	Longitude     int
@@ -28,13 +28,14 @@ type Ads struct {
 	FloorNumber   int
 	Anbary        bool
 	Elevator      bool
+	Title         string
 	Pictures      []*Pictures `gorm:"many2many:Pictures"`
 	Users         []*Users    `gorm:"many2many:Users_Ads"`
 }
 
 type Pictures struct {
 	gorm.Model
-	ID          uint
+	ID          uint `gorm:"primaryKey;autoIncrement"`
 	PictureLink string
 	AdId        uint
 	Ad          Ads `gorm:"foreignKey:AdId"`
@@ -51,7 +52,7 @@ type Users_Ads struct {
 
 type Users struct {
 	gorm.Model
-	ID               uint
+	ID               uint `gorm:"primaryKey;autoIncrement"`
 	TelegramId       string
 	Role             string
 	MaxSearchedItems uint
@@ -62,7 +63,7 @@ type Users struct {
 
 type Filters struct {
 	gorm.Model
-	ID                 uint
+	ID                 uint `gorm:"primaryKey;autoIncrement"`
 	NumberOfRequests   uint
 	StartPrice         uint
 	EndPrice           uint
