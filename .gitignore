@@ -23,4 +23,6 @@ go.work.sum
 
 # env file
 .env
-crawler/cache
+crawler/temp_db_json.go
+database/city.json 
+database/districts.json 

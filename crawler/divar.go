@@ -15,7 +15,7 @@ import (
 
 const url string = "https://divar.ir/s/iran/real-estate?page=%d"
 
-type Advertisement = models.Advertisement
+type Advertisement = models.Ads
 
 type divar struct {
 	*models.CrawlerAbstract
@@ -55,7 +55,7 @@ func (c *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 
 	for _, aTag := range listOfLinks {
 		link := getUniqueID(aTag.MustProperty("href").Str())
-		ad := &Advertisement{UniqueID: link, Source: "divar"}
+		ad := &Advertisement{UniqueID: link, Link: "divar", NumberOfViews: 0, Pictures: make([]*models.Pictures, 0)}
 		Ads = append(Ads, ad)
 	}
 
@@ -65,18 +65,24 @@ func (c *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 }
 
 func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
+
 	defer wg.Done()
 	collector := bInstance.MustPage("https://divar.ir/v" + ad.UniqueID)
 
 	collector.WaitStable(10)
 
+	if ok, _, _ := collector.HasR(`a.kt-breadcrumbs__action`, `\u06a9\u0644\u0646\u06af\u06cc`); ok {
+		ad.CategoryAV = ""
+		return
+	}
+
 	ad.Title = collector.MustElement("h1").MustWaitVisible().MustText()
 
-	ad.Desc = collector.MustElement(`p.kt-description-row__text.kt-description-row__text--primary`).MustWaitVisible().MustText()
+	ad.Description = collector.MustElement(`p.kt-description-row__text.kt-description-row__text--primary`).MustWaitVisible().MustText()
 
 	ok, _, _ := collector.HasR(`td`, `^\u0627\u0646\u0628\u0627\u0631\u06cc$`) // checks for warehouse
 
-	ad.Warehouse = ok
+	ad.Anbary = ok
 
 	ok, _, _ = collector.HasR(`td`, `^\u0622\u0633\u0627\u0646\u0633\u0648\u0631$`) // checks for elevator
 
@@ -85,20 +91,83 @@ func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	ok, _, _ = collector.HasR(`a.kt-breadcrumbs__action`, `\u0622\u067e\u0627\u0631\u062a\u0645\u0627\u0646`) //  checks for property type
 
 	if ok {
-		ad.TypeOfProperty = "apartment"
+		ad.CategoryAV = "apartment"
 	} else {
-		ad.TypeOfProperty = "villa"
+		ad.CategoryAV = "villa"
 	}
 
-	surface, year, rooms := getSurfaceAndYearAndRooms(collector)
+	if ok, _, _ = collector.HasR(`a.kt-breadcrumbs__action`, `\u0641\u0631\u0648\u0634`); ok {
+		ad.CategoryPMR = `sale`
+		ad.SellPrice = getSellPrice(collector)
+		ad.MortgagePrice = -1
+		ad.RentPrice = -1
+	} else {
+		// FIXED LATER
+	}
 
-	ad.Surface = surface
-	ad.YearOfBuild = year
-	ad.RoomsCount = rooms
+	ad.FloorNumber = getFloor(collector)
+
+	surface, year, rooms := getSurfaceAndYearAndRooms(collector)
+	ad.Meters = surface
+	ad.Age = year
+	ad.NumberOfRooms = rooms
 
 	getLocation(ad, collector)
 
+	ad.City = getCity(collector)
+	ad.Mahale = getNeighbourhood(collector)
+
 	fmt.Println(ad)
+}
+
+func cleanPrices(a string) string {
+	return strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(a, `٬`, ``), `تومان`, ``))
+}
+
+func getSellPrice(collector *rod.Page) int {
+	if ok, section, _ := collector.HasR(`div.kt-base-row.kt-base-row--large.kt-unexpandable-row`, `\u0642\u06cc\u0645\u062a\u0020\u06a9\u0644`); ok {
+		uncleanedPrice := section.MustElement(`p.kt-unexpandable-row__value`).MustText()
+		return changeFarsiToEng(cleanPrices(uncleanedPrice))
+
+	}
+	return -1
+}
+
+func getFloor(collector *rod.Page) int {
+	if ok, section, _ := collector.HasR(`div.kt-base-row.kt-base-row--large.kt-unexpandable-row`, `\u0637\u0628\u0642\u0647`); ok {
+		floor := section.MustElement(`p.kt-unexpandable-row__value`).MustText()
+		r := regexp.MustCompile(`[\\u06f1-\\u06f9]+`)
+		return changeFarsiToEng(r.FindString(floor))
+	}
+	return -1
+}
+
+func getNeighbourhood(collector *rod.Page) string {
+
+	all, _ := getDistricts()
+	lst := all.Districts
+
+	for i := range lst {
+		if ok, _, _ := collector.HasR(`div.kt-page-title__subtitle`, lst[i].Display); ok {
+			return lst[i].Display
+		}
+
+	}
+	return ""
+}
+
+func getCity(collector *rod.Page) string {
+
+	all, _ := getCities()
+	lst := all.Cities
+
+	for i := range lst {
+		if ok, _, _ := collector.HasR(`div.kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`, lst[i].Display); ok {
+			return lst[i].Display
+		}
+
+	}
+	return ""
 }
 
 func changeFarsiToEng(a string) int {

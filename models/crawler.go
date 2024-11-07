@@ -8,8 +8,8 @@ import (
 )
 
 type Crawler interface {
-	GetTargets(page int, collector *rod.Browser) []*Advertisement
-	GetDetails(*Advertisement, *rod.Browser, *sync.WaitGroup)
+	GetTargets(page int, collector *rod.Browser) []*Ads
+	GetDetails(*Ads, *rod.Browser, *sync.WaitGroup)
 } // TODO types should be added after ad structs are finished
 
 type CrawlerAbstract struct {
@@ -30,7 +30,7 @@ func (c *CrawlerAbstract) Start() {
 		// randomSleep := rand.Intn(50) + 2 // To prevent rate-limits
 		time.Sleep(time.Second * 2)
 	}
-	c.validateJSON()
+	Ads = c.validateItems(Ads)
 	c.sendDataToDB()
 }
 
@@ -38,6 +38,13 @@ func (c *CrawlerAbstract) sendDataToDB() {
 
 }
 
-func (b *CrawlerAbstract) validateJSON() {
+func (b *CrawlerAbstract) validateItems(adList []*Ads) []*Ads {
+	var res []*Ads
+	for i := range adList {
+		if adList[i].CategoryAV != "" {
+			res = append(res, adList[i])
+		}
+	}
+	return adList
 
 }
