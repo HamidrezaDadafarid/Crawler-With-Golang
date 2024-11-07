@@ -10,21 +10,24 @@ type Ads struct {
 	gorm.Model
 	ID            uint
 	Link          string `gorm:"unique;not null"`
-	OwnerNumber   string
+	UniqueId      string
+	Longitude     int
+	Latitude      int
 	Description   string
 	NumberOfViews uint
-	Price         uint
+	SellPrice     uint
+	RentPrice     uint
+	MortagePrice  uint
 	City          string
 	Mahale        string
 	Meters        uint
 	NumberOfRooms uint
-	Category1     string
-	Category2     string
+	CategoryPMR   uint
 	Age           uint
+	CategoryAV    uint
 	FloorNumber   int
 	Anbary        bool
 	Elevator      bool
-	AdDate        time.Time
 	Pictures      []*Pictures `gorm:"many2many:Pictures"`
 	Users         []*Users    `gorm:"many2many:Users_Ads"`
 }
@@ -64,15 +67,15 @@ type Filters struct {
 	StartPrice         uint
 	EndPrice           uint
 	City               string
-	Mahale             string
+	Neighborhood       string
 	SartArea           uint
 	EndArea            uint
 	StartNumberOfRooms uint
 	EndNumberOfRooms   uint
-	Category1          string
-	Category2          string
+	CategoryPMR        uint
 	StartAge           uint
 	EndAge             uint
+	CategoryAV         uint
 	StartFloorNumber   int
 	EndFloorNumber     int
 	Anbary             bool
