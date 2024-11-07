@@ -29,20 +29,19 @@ func ParseRanges(input string) (int, int, error) {
 	return minValue, maxValue, nil
 }
 
-// TODO: only year or date
 func ParseDateRanges(input string) (string, string, error) {
 	parts := strings.Split(input, " ")
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid format")
+		return "", "", fmt.Errorf("بازه تاریخ آگهی باید به صورت دو تاریخ به صورت روز-ماه-سال باشد که با یک فاصله از هم جدا شده اند")
 	}
 
 	minDate, err := time.Parse("2006-01-02", parts[0])
 	if err != nil {
-		return "", "", fmt.Errorf("invalid min date format")
+		return "", "", fmt.Errorf("تاریخ اول نامعتبر است. لطفا دوباره تلاش کنید")
 	}
 	maxDate, err := time.Parse("2006-01-02", parts[1])
 	if err != nil {
-		return "", "", fmt.Errorf("invalid max date format")
+		return "", "", fmt.Errorf("تاریخ دوم نا معتبر است. لطفا دوباره تلاش کنید")
 	}
 
 	return minDate.Format("2006-01-02"), maxDate.Format("2006-01-02"), nil
