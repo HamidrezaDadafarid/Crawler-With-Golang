@@ -19,40 +19,23 @@ type gormUser struct {
 
 func (g *gormUser) Add(user models.Users) (models.Users, error) {
 	result := g.Db.Create(&user)
-	if result.Error != nil {
-		return user, result.Error
-	}
-
-	return user, nil
+	return user, result.Error
 }
 
 func (g *gormUser) Delete(id uint) error {
 	result := g.Db.Delete(&models.Users{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 func (g *gormUser) Get(ids []uint) ([]models.Users, error) {
 	var users []models.Users
 	result := g.Db.Find(&users, ids)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return users, nil
+	return users, result.Error
 }
 
 func (g *gormUser) Update(user models.Users) error {
 	result := g.Db.Save(&user)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 var _ User = (*gormUser)(nil)

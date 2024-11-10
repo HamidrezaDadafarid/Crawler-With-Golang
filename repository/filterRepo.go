@@ -25,40 +25,23 @@ func NewGormFilter(Db *gorm.DB) Filter {
 
 func (g *gormFilter) Add(filter models.Filters) (models.Filters, error) {
 	result := g.Db.Create(&filter)
-	if result.Error != nil {
-		return filter, result.Error
-	}
-
-	return filter, nil
+	return filter, result.Error
 }
 
 func (g *gormFilter) Delete(id uint) error {
 	result := g.Db.Delete(&models.Filters{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 func (g *gormFilter) Get(ids []uint) ([]models.Filters, error) {
 	var filters []models.Filters
 	result := g.Db.Find(&filters, ids)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return filters, nil
+	return filters, result.Error
 }
 
 func (g *gormFilter) Update(filter models.Filters) error {
 	result := g.Db.Save(&filter)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 var _ Filter = (*gormFilter)(nil)

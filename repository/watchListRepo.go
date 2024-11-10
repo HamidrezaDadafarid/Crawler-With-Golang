@@ -20,50 +20,29 @@ type gormWatchList struct {
 
 func (g *gormWatchList) Add(watchList models.WatchList) error {
 	result := g.Db.Create(&watchList)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 func (g *gormWatchList) Delete(id uint) error {
 	result := g.Db.Delete(&models.WatchList{}, id)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 func (g *gormWatchList) GetByUserId(userIds []uint) ([]models.WatchList, error) {
 	var watchLists []models.WatchList
 	result := g.Db.Where("UserId IN ?", userIds).Find(&watchLists)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return watchLists, nil
+	return watchLists, result.Error
 }
 
 func (g *gormWatchList) GetByFilterId(filterIds []uint) ([]models.WatchList, error) {
 	var watchLists []models.WatchList
 	result := g.Db.Where("FilterId IN ?", filterIds).Find(&watchLists)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return watchLists, nil
+	return watchLists, result.Error
 }
 
 func (g *gormWatchList) Update(watchList models.WatchList) error {
 	result := g.Db.Save(&watchList)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+	return result.Error
 }
 
 var _ WatchList = (*gormWatchList)(nil)
