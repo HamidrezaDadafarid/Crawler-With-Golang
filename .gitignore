@@ -28,3 +28,4 @@ config.go
 logger.go
 config/config.go
 log/logger.go
+.DS_Store
