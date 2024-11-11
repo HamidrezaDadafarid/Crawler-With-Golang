@@ -3,6 +3,7 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"main/models"
 	"main/utils"
 	"strconv"
 	"strings"
@@ -139,7 +140,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 
 // -userMenu handlers
 func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
-	session := GetUserSession(c.Chat().ID)
+	session := models.GetUserSession(c.Chat().ID)
 	session.State = "selecting_filter"
 
 	filterMenu.Reply(
@@ -304,7 +305,7 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 
 	// TODO: insert it into database
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
-		session := GetUserSession(c.Chat().ID)
+		session := models.GetUserSession(c.Chat().ID)
 
 		for key, value := range session.Filters {
 			err = c.Send(fmt.Sprintf("key={%s}, value={%s}", key, value))
@@ -395,7 +396,7 @@ func (t *Telegram) handleSetNumberOfAds(c telebot.Context) error {
 }
 
 func (t *Telegram) handleText(c telebot.Context) (err error) {
-	session := GetUserSession(c.Chat().ID)
+	session := models.GetUserSession(c.Chat().ID)
 	input := c.Text()
 
 	switch session.State {
