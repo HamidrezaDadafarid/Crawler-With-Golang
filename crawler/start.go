@@ -1,9 +1,5 @@
-package crawler 
-
-import (
-	"main/models"
-)
+package crawler
 
 func main() {
-	
+
 }
