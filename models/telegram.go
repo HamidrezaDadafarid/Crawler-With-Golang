@@ -309,6 +309,13 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 
 	// TODO: Hirad --> back button
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
+		session.State = ""
+		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
+		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
+		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+
+		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 		return
 	})
 
@@ -322,6 +329,8 @@ func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
 }
 
 // TODO
+func (t *Telegram) handleGetOutput(c telebot.Context) error {
+	session := GetUserSession(c.Chat().ID)
 func (t *Telegram) handleGetOutput(c telebot.Context) (err error) {
 	getOutputFileMenu.Reply(
 		getOutputFileMenu.Row(btnGetAsZip, btnGetViaEmail),
@@ -329,6 +338,18 @@ func (t *Telegram) handleGetOutput(c telebot.Context) (err error) {
 	)
 
 	// TODO
+	t.Bot.Handle(&btnGetOutputFile, t.handleGetOutputFile)
+	t.Bot.Handle(&btnGetViaEmail, t.handleGetOutputViaEmail)
+	// TODO: Hirad
+	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context)) (err error) {
+
+		session.State = ""
+		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
+		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
+		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+
+		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 	t.Bot.Handle(&btnGetAsZip, func(c telebot.Context) (err error) {
 		return
 	})
@@ -342,7 +363,7 @@ func (t *Telegram) handleGetOutput(c telebot.Context) (err error) {
 	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context) (err error) {
 		return
 	})
-	return nil
+	return c.Send("نحوه خروجی گرفتن را انتخاب کنید", getOutputFileMenu) //TODO: change text message
 }
 
 // TODO
