@@ -2,7 +2,7 @@ package models
 
 type UserSession struct {
 	ChatID  int64
-	Filters map[string]string
+	Filters Filters
 	State   string
 }
 
@@ -12,8 +12,7 @@ func GetUserSession(chatID int64) *UserSession {
 	session, exists := userSessions[chatID]
 	if !exists {
 		session = &UserSession{
-			ChatID:  chatID,
-			Filters: make(map[string]string),
+			ChatID: chatID,
 		}
 		userSessions[chatID] = session
 	}

@@ -36,7 +36,7 @@ func (g *gormAd) Delete(id uint) error {
 
 func (g *gormAd) Get(filter models.Filters) ([]models.Ads, error) {
 	var ads []models.Ads
-	result := g.Db.Where("SellPrice BETWEEN ? AND ? OR RentPrice BETWEEN ? AND ? OR MortagePrice BETWEEN ? AND ? OR City LIKE ? OR Mahale LIKE ? OR NumberOfRooms BETWEEN ? AND ? OR CategoryPMR = ? OR CategoryAV = ? OR Age BETWEEN ? AND ? OR FloorNumber BETWEEN ? AND ? OR Anbary = ? OR ELevator = ?", filter.StartPrice, filter.EndPrice, filter.StartPrice, filter.EndPrice, filter.StartPrice, filter.EndPrice, filter.City, filter.Neighborhood, filter.StartNumberOfRooms, filter.EndNumberOfRooms, filter.CategoryAV, filter.CategoryPMR, filter.StartAge, filter.EndAge, filter.StartFloorNumber, filter.EndFloorNumber, filter.Anbary, filter.Elevator).Find(&ads)
+	result := g.Db.Where("SellPrice BETWEEN ? AND ? OR RentPrice BETWEEN ? AND ? OR MortagePrice BETWEEN ? AND ? OR City LIKE ? OR Mahale LIKE ? OR NumberOfRooms BETWEEN ? AND ? OR CategoryPMR = ? OR CategoryAV = ? OR Age BETWEEN ? AND ? OR FloorNumber BETWEEN ? AND ? OR Anbary = ? OR ELevator = ?", filter.StartPrice, filter.EndPrice, filter.StartPrice, filter.EndPrice, filter.StartPrice, filter.EndPrice, filter.City, filter.Neighborhood, filter.StartNumberOfRooms, filter.EndNumberOfRooms, filter.CategoryAV, filter.CategoryPR, filter.StartAge, filter.EndAge, filter.StartFloorNumber, filter.EndFloorNumber, filter.Storage, filter.Elevator).Find(&ads)
 	return ads, result.Error
 }
 

@@ -1,4 +1,4 @@
-package models
+package telegram
 
 import (
 	"fmt"
@@ -350,7 +350,6 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 		return
 	})
 	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context) (err error) {
-
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
 		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
