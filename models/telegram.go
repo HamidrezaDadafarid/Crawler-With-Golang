@@ -304,6 +304,11 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 
 	// TODO: insert it into database
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
+		session := GetUserSession(c.Chat().ID)
+
+		for key, value := range session.Filters {
+			err = c.Send(fmt.Sprintf("key={%s}, value={%s}", key, value))
+		}
 		return
 	})
 
@@ -463,22 +468,28 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		err = c.Send("بازه تعداد طبقه مورد نظر ثبت شد", filterMenu)
 
 	case "setting_storage":
-		lowerInput := strings.TrimSpace(strings.ToLower(input))
-		if lowerInput != "بله" && lowerInput != "خیر" {
+		if input != "بله" && input != "خیر" {
 			err = c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
 			return
 		}
-		session.Filters["storage"] = lowerInput
+		if input == "بله" {
+			session.Filters["storage"] = "yes"
+		} else {
+			session.Filters["storage"] = "no"
+		}
 		session.State = ""
 		err = c.Send("ثبت شد", filterMenu)
 
 	case "setting_elevator":
-		lowerInput := strings.TrimSpace(strings.ToLower(input))
-		if lowerInput != "بله" && lowerInput != "خیر" {
+		if input != "بله" && input != "خیر" {
 			err = c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
 			return
 		}
-		session.Filters["elevator"] = lowerInput
+		if input == "بله" {
+			session.Filters["elevator"] = "yes"
+		} else {
+			session.Filters["elevator"] = "no"
+		}
 		session.State = ""
 		_ = c.Send("ثبت شد", filterMenu)
 
