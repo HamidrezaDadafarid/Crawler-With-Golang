@@ -302,12 +302,12 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		return
 	})
 
-	// TODO: Mohammad --> insert it into database
+	// TODO: insert it into database
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
 		return
 	})
 
-	// TODO: Hirad --> back button
+	// TODO: Hirad
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
@@ -324,24 +324,27 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 }
 
 // TODO
-func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
+func (t *Telegram) handleShareBookmarks(c telebot.Context) error {
 	return nil
 }
 
 // TODO
 func (t *Telegram) handleGetOutput(c telebot.Context) error {
 	session := GetUserSession(c.Chat().ID)
-func (t *Telegram) handleGetOutput(c telebot.Context) (err error) {
 	getOutputFileMenu.Reply(
 		getOutputFileMenu.Row(btnGetAsZip, btnGetViaEmail),
-		getOutputFileMenu.Row(btnBackGetOutputFileMenu),
+		getOutputFileMenu.Row(btnBackFilterMenu),
 	)
 
 	// TODO
-	t.Bot.Handle(&btnGetOutputFile, t.handleGetOutputFile)
-	t.Bot.Handle(&btnGetViaEmail, t.handleGetOutputViaEmail)
-	// TODO: Hirad
-	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context)) (err error) {
+	t.Bot.Handle(&btnGetOutputFile, func(c telebot.Context) (err error) {
+		return
+	})
+	// TODO
+	t.Bot.Handle(&btnGetViaEmail, func(c telebot.Context) (err error) {
+		return
+	})
+	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context) (err error) {
 
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
@@ -350,51 +353,40 @@ func (t *Telegram) handleGetOutput(c telebot.Context) (err error) {
 		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
 
 		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
-	t.Bot.Handle(&btnGetAsZip, func(c telebot.Context) (err error) {
-		return
-	})
-
-	// TODO
-	t.Bot.Handle(&btnGetViaEmail, func(c telebot.Context) (err error) {
-		return
-	})
-
-	// TODO: Hirad --> back button
-	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context) (err error) {
 		return
 	})
 	return c.Send("نحوه خروجی گرفتن را انتخاب کنید", getOutputFileMenu) //TODO: change text message
 }
 
 // TODO
-func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
+func (t *Telegram) handleDeleteHistory(c telebot.Context) error {
 	return nil
 }
 
 // -adminMenu handlers
 // TODO
-func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) (err error) {
+func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) error {
 	return nil
 }
 
-// -superAdmin menu handlers
+// Super admin menu handlers
 // TODO
-func (t *Telegram) handleAddAdmin(c telebot.Context) (err error) {
-	return nil
-}
-
-// TODO
-func (t *Telegram) handleManageAdmins(c telebot.Context) (err error) {
+func (t *Telegram) handleAddAdmin(c telebot.Context) error {
 	return nil
 }
 
 // TODO
-func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) (err error) {
+func (t *Telegram) handleManageAdmins(c telebot.Context) error {
 	return nil
 }
 
 // TODO
-func (t *Telegram) handleSetNumberOfAds(c telebot.Context) (err error) {
+func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) error {
+	return nil
+}
+
+// TODO
+func (t *Telegram) handleSetNumberOfAds(c telebot.Context) error {
 	return nil
 }
 
@@ -403,7 +395,6 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 	input := c.Text()
 
 	switch session.State {
-
 	case "setting_city":
 		session.Filters["city"] = strings.TrimSpace(strings.ToLower(input))
 		session.State = ""
