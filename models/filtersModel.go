@@ -10,20 +10,24 @@ type Filters struct {
 	gorm.Model
 	ID                 uint `gorm:"primaryKey;autoIncrement"`
 	NumberOfRequests   uint
-	StartPrice         *uint
-	EndPrice           *uint
+	StartPurchasePrice *uint
+	EndPurchasePrice   *uint
+	StartRentPrice     *uint
+	EndRentPrice       *uint
+	StartMortgagePrice *uint
+	EndMortgagePrice   *uint
 	City               *string
 	Neighborhood       *string
-	SartArea           *uint
+	StartArea          *uint
 	EndArea            *uint
 	StartNumberOfRooms *uint
 	EndNumberOfRooms   *uint
-	CategoryPR         *uint
+	CategoryPR         *uint // 0 for purchase, 1 for rents
 	StartAge           *uint
 	EndAge             *uint
-	CategoryAV         *uint
-	StartFloorNumber   *int
-	EndFloorNumber     *int
+	CategoryAV         *uint // 0 for villa, 1 for apartment
+	StartFloorNumber   *uint
+	EndFloorNumber     *uint
 	Storage            *bool
 	Elevator           *bool
 	Parking            *bool

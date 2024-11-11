@@ -20,7 +20,7 @@ type Ads struct {
 	Mahale        string
 	Meters        uint
 	NumberOfRooms uint
-	CategoryPMR   uint
+	CategoryPR    uint
 	Age           uint
 	CategoryAV    uint
 	FloorNumber   int

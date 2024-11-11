@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func ParseRanges(input string) (int, int, error) {
+func ParseRanges(input string) (uint, uint, error) {
 	parts := strings.Split(input, "-")
 	if len(parts) != 2 {
 		return 0, 0, fmt.Errorf("بازه قیمت باید به صورت دو عدد باشد که با - از هم جدا شده اند. دوباره تلاش کنید")
@@ -26,23 +26,23 @@ func ParseRanges(input string) (int, int, error) {
 	if maxValue < minValue {
 		return 0, 0, fmt.Errorf("عدد دوم بازه باید کوچک تر از عدد اول آن باشد! دوباره تلاش کنید")
 	}
-	return minValue, maxValue, nil
+	return uint(minValue), uint(maxValue), nil
 }
 
-func ParseDateRanges(input string) (string, string, error) {
+func ParseDateRanges(input string) (time.Time, time.Time, error) {
 	parts := strings.Split(input, " ")
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("بازه تاریخ آگهی باید به صورت دو تاریخ به صورت روز-ماه-سال باشد که با یک فاصله از هم جدا شده اند")
+		return time.Time{}, time.Time{}, fmt.Errorf("بازه تاریخ آگهی باید به صورت دو تاریخ به صورت روز-ماه-سال باشد که با یک فاصله از هم جدا شده اند")
 	}
 
 	minDate, err := time.Parse("2006-01-02", parts[0])
 	if err != nil {
-		return "", "", fmt.Errorf("تاریخ اول نامعتبر است. لطفا دوباره تلاش کنید")
+		return time.Time{}, time.Time{}, fmt.Errorf("تاریخ اول نامعتبر است. لطفا دوباره تلاش کنید")
 	}
 	maxDate, err := time.Parse("2006-01-02", parts[1])
 	if err != nil {
-		return "", "", fmt.Errorf("تاریخ دوم نا معتبر است. لطفا دوباره تلاش کنید")
+		return time.Time{}, time.Time{}, fmt.Errorf("تاریخ دوم نا معتبر است. لطفا دوباره تلاش کنید")
 	}
 
-	return minDate.Format("2006-01-02"), maxDate.Format("2006-01-02"), nil
+	return minDate, maxDate, nil
 }
