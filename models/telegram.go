@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"log"
+	"main/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -312,6 +313,13 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 
 	// TODO: Hirad
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
+		session.State = ""
+		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
+		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
+		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+
+		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 		return
 	})
 
@@ -326,6 +334,7 @@ func (t *Telegram) handleShareBookmarks(c telebot.Context) error {
 
 // TODO
 func (t *Telegram) handleGetOutput(c telebot.Context) error {
+	session := GetUserSession(c.Chat().ID)
 	getOutputFileMenu.Reply(
 		getOutputFileMenu.Row(btnGetAsZip, btnGetViaEmail),
 		getOutputFileMenu.Row(btnBackFilterMenu),
@@ -335,10 +344,18 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 	t.Bot.Handle(&btnGetOutputFile, t.handleGetOutputFile)
 	t.Bot.Handle(&btnGetViaEmail, t.handleGetOutputViaEmail)
 	// TODO: Hirad
-	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
+	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context) (err error) {
+
+		session.State = ""
+		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
+		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
+		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+
+		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 		return
 	})
-	return nil
+	return c.Send("نحوه خروجی گرفتن را انتخاب کنید", getOutputFileMenu) //TODO: change text message
 }
 
 // TODO
@@ -394,7 +411,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		} else {
 			// TODO
 		}
-		minPrice, maxPrice, e := parseRanges(input)
+		minPrice, maxPrice, e := utils.ParseRanges(input)
 		if e != nil {
 			err = c.Send(e.Error())
 			return
@@ -416,7 +433,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		return c.Send("محله مورد نظر ثبت شد", filterMenu)
 
 	case "setting_area":
-		minArea, maxArea, err := parseRanges(input)
+		minArea, maxArea, err := utils.ParseRanges(input)
 		if err != nil {
 			return c.Send(err.Error())
 		}
@@ -426,7 +443,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		return c.Send("بازه متراژ مورد نظر ثبت شد", filterMenu)
 
 	case "setting_number_of_rooms":
-		minNumberOfRooms, maxNumberOfRooms, err := parseRanges(input)
+		minNumberOfRooms, maxNumberOfRooms, err := utils.ParseRanges(input)
 		if err != nil {
 			return c.Send(err.Error())
 		}
@@ -445,7 +462,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		return c.Send("دسته بندی مورد نظر ثبت شد", filterMenu)
 
 	case "setting_age":
-		minAge, maxAge, err := parseRanges(input)
+		minAge, maxAge, err := utils.ParseRanges(input)
 		if err != nil {
 			return c.Send(err.Error())
 		}
@@ -464,7 +481,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		return c.Send("دسته بندی مورد نظر ثبت شد", filterMenu)
 
 	case "setting_floor_number":
-		minFloorNumber, maxFloorNumber, err := parseRanges(input)
+		minFloorNumber, maxFloorNumber, err := utils.ParseRanges(input)
 		if err != nil {
 			return c.Send(err.Error())
 		}
@@ -492,7 +509,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		return c.Send("ثبت شد", filterMenu)
 
 	case "setting_ad_date":
-		minDate, maxDate, err := ParseDateRanges(input)
+		minDate, maxDate, err := utils.ParseDateRanges(input)
 		if err != nil {
 			return c.Send(err.Error())
 		}
