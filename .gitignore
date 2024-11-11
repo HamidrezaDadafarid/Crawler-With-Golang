@@ -26,3 +26,5 @@ go.work.sum
 go.mod
 config.go
 logger.go
+config/config.go
+log/logger.go
