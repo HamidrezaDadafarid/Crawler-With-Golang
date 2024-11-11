@@ -147,7 +147,7 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		filterMenu.Row(btnArea, btnNumberOfRooms, btnAdDate),
 		filterMenu.Row(btnAge, btnCategoryAV, btnFloorNumber),
 		filterMenu.Row(btnElevator, btnStorage),
-		filterMenu.Row(btnBackFilterMenu),
+		filterMenu.Row(btnSendFilter, btnBackFilterMenu),
 	)
 
 	t.Bot.Handle(&btnPrice, func(c telebot.Context) (err error) {
@@ -481,9 +481,6 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.Filters["elevator"] = lowerInput
 		session.State = ""
 		_ = c.Send("ثبت شد", filterMenu)
-		for key, value := range session.Filters {
-			_ = c.Send(fmt.Sprintf("key={%s}, value={%s}", key, value))
-		}
 
 	case "setting_ad_date":
 		minDate, maxDate, e := utils.ParseDateRanges(input)
