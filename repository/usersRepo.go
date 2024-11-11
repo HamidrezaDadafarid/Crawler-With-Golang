@@ -17,6 +17,12 @@ type gormUser struct {
 	Db *gorm.DB
 }
 
+func NewGormUser(Db *gorm.DB) User {
+	return &gormUser{
+		Db: Db,
+	}
+}
+
 func (g *gormUser) Add(user models.Users) (models.Users, error) {
 	result := g.Db.Create(&user)
 	return user, result.Error

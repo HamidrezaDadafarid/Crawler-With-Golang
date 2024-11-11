@@ -27,6 +27,6 @@ type Ads struct {
 	Anbary        bool
 	Elevator      bool
 	Title         string
-	Pictures      []*Pictures `gorm:"many2many:Pictures"`
-	Users         []*Users    `gorm:"many2many:Users_Ads"`
+	PictureLink   string
+	Users         []*Users `gorm:"many2many:Users_Ads"`
 }

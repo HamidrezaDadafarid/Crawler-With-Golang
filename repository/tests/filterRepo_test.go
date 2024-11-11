@@ -33,6 +33,28 @@ func TestFilterRepo(t *testing.T) {
 		EndDate:            time.Now().Add(time.Hour * 48),
 	})
 	if err != nil {
+		t.Error("failed to add filter")
+	}
 
+	addedFilter.City = "Updated city"
+	err = repo.Update(addedFilter)
+	if err != nil {
+		t.Error("failed to update filter")
+	}
+
+	updatedFilter, err := repo.Get([]uint{addedFilter.ID})
+
+	if err != nil {
+		t.Error("Failed to get filter")
+	}
+
+	if updatedFilter[0].City != "Updated city" {
+		t.Error("failed to update filter")
+	}
+
+	err = repo.Delete(addedFilter.ID)
+
+	if err != nil {
+		t.Error("failed to delete filter")
 	}
 }
