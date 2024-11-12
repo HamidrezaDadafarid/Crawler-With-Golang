@@ -10,6 +10,7 @@ type User interface {
 	Add(user models.Users) (models.Users, error)
 	Delete(id uint) error
 	Get(ids []uint) ([]models.Users, error)
+	GetByTelegramID(telegram_id uint) (models.Users, error)
 	Update(user models.Users) error
 }
 

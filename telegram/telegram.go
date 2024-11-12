@@ -3,7 +3,9 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"main/database"
 	"main/models"
+	"main/repository"
 	"main/utils"
 	"strings"
 	"time"
@@ -94,12 +96,11 @@ func (t *Telegram) Start() {
 
 func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	welcomeMsg := "به ربات خزنده خوش اومدین :)"
-	// TODO
-	// get user's role with this telegram id from database
-	// telegram_ID := c.Sender().ID
-	// role := SELECT role FROM users WHERE telegram_ID = telegram_ID
-	role := "user"
-	if role == "user" {
+
+	telegram_ID := c.Sender().ID
+	gormUser := repository.NewGormUser(database.GetInstnace().Db)
+	user, _ := gormUser.GetByTelegramID(uint(telegram_ID))
+	if user.Role == "user" {
 		userMenu.Reply(
 			userMenu.Row(btnSetFilters, btnShareBookmarks),
 			userMenu.Row(btnGetOutputFile, btnDeleteHistory),
@@ -112,7 +113,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 
 		err = c.Send(welcomeMsg, userMenu)
 
-	} else if role == "admin" {
+	} else if user.Role == "admin" {
 		adminMenu.Reply(
 			adminMenu.Row(btnSeeCrawlDetails),
 		)
