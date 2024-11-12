@@ -17,14 +17,14 @@ type Ads struct {
 	RentPrice     uint
 	MortagePrice  uint
 	City          string
-	Mahale        string
+	Neighborhood  string
 	Meters        uint
 	NumberOfRooms uint
 	CategoryPR    uint
 	Age           uint
 	CategoryAV    uint
-	FloorNumber   int
-	Anbary        bool
+	FloorNumber   uint
+	Storage       bool
 	Elevator      bool
 	Title         string
 	PictureLink   string

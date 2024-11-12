@@ -19,14 +19,14 @@ func TestAdsRepo(t *testing.T) {
 		NumberOfViews: 11,
 		SellPrice:     100,
 		City:          "Shiraz",
-		Mahale:        "mahale",
+		Neighborhood:  "mahale",
 		Meters:        1000,
 		NumberOfRooms: 10,
-		CategoryPMR:   1,
+		CategoryPR:    1,
 		Age:           10,
 		CategoryAV:    2,
 		FloorNumber:   1,
-		Anbary:        true,
+		Storage:       true,
 		Elevator:      true,
 		Title:         "Best",
 	})
@@ -44,14 +44,14 @@ func TestAdsRepo(t *testing.T) {
 		NumberOfViews: 11,
 		SellPrice:     100,
 		City:          "Shiraz",
-		Mahale:        "mahale",
+		Neighborhood:  "mahale",
 		Meters:        1000,
 		NumberOfRooms: 10,
-		CategoryPMR:   1,
+		CategoryPR:    1,
 		Age:           10,
 		CategoryAV:    2,
 		FloorNumber:   1,
-		Anbary:        true,
+		Storage:       true,
 		Elevator:      true,
 		Title:         "Best",
 	})
@@ -69,7 +69,7 @@ func TestAdsRepo(t *testing.T) {
 	}
 
 	byFilter, err := adRepo.Get(models.Filters{
-		Elevator: false,
+		Elevator: models.Ptr(false),
 	})
 
 	if err != nil {

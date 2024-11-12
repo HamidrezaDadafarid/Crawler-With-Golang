@@ -39,6 +39,12 @@ func (g *gormUser) Get(ids []uint) ([]models.Users, error) {
 	return users, result.Error
 }
 
+func (g *gormUser) GetByTelegramID(telegramID uint) (models.Users, error) {
+	var user models.Users
+	result := g.Db.Find(&user, telegramID)
+	return user, result.Error
+}
+
 func (g *gormUser) Update(user models.Users) error {
 	result := g.Db.Save(&user)
 	return result.Error
