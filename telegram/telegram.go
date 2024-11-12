@@ -99,12 +99,12 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	welcomeMsg := "به ربات خزنده خوش اومدین :)"
 
 	var user models.Users
-	telegram_ID := c.Sender().ID
-	gormUser := repository.NewGormUser(database.GetInstnace().Db)
-	user, _ = gormUser.GetByTelegramID(strconv.Itoa(int(telegram_ID)))
-	if user.Role == "" {
-		user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
-	}
+	// telegram_ID := c.Sender().ID
+	// gormUser := repository.NewGormUser(database.GetInstnace().Db)
+	// user, _ = gormUser.GetByTelegramID(strconv.Itoa(int(telegram_ID)))
+	// if user.Role == "" {
+	// 	user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
+	// }
 	if user.Role == "user" {
 		userMenu.Reply(
 			userMenu.Row(btnSetFilters, btnShareBookmarks),
@@ -376,15 +376,15 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) error {
 	telegram_ID := c.Sender().ID
 	userRepo := repository.NewGormUser(database.GetInstnace().Db)
 	userAdsRepo := repository.NewGormUser_Ad(database.GetInstnace().Db)
-	user, err := userRepo.GetByTelegramID(uint(telegram_ID))
+	user, err := userRepo.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
 	if err != nil {
 		return err
 	}
-	userads, err := userAdsRepo.GetByUserId([]uint{user.ID})
+	userAds, err := userAdsRepo.GetByUserId([]uint{user.ID})
 	if err != nil {
 		return err
 	}
-	for _, item := range userads {
+	for _, item := range userAds {
 		err = userAdsRepo.Delete(item.User.ID, item.AdId)
 		if err != nil {
 			return err
