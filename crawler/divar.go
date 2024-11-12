@@ -125,8 +125,6 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	ad.Mahale = getNeighbourhood(collector)
 
 	ad.PictureLink = getPicture(collector)
-
-	fmt.Println(ad)
 }
 
 func getPicture(collector *rod.Page) string {
@@ -169,12 +167,11 @@ func getNormal(collector *rod.Page) (int, int) {
 		uncleaned string
 	)
 
-	uncleaned = getNumbersFromSections(`^\u0648\u062f\u06cc\u0639\u0647$`, collector) // mortgage price
-	fmt.Println(uncleaned)
-	mort = changeFarsiToEng(uncleaned)
+	uncleaned = getNumbersFromSections(`\u0648\u062f\u06cc\u0639\u0647`, collector) // mortgage price
+	mort = changeFarsiToEng(cleanPrices(uncleaned))
 
-	uncleaned = getNumbersFromSections(`^\u0627\u062c\u0627\u0631\u0647\u0654\u0020\u0645\u0627\u0647\u0627\u0646\u0647$`, collector) // rent price
-	rent = changeFarsiToEng(uncleaned)
+	uncleaned = getNumbersFromSections(`\u0627\u062c\u0627\u0631\u0647\u0654\u0020\u0645\u0627\u0647\u0627\u0646\u0647`, collector) // rent price
+	rent = changeFarsiToEng(cleanPrices(uncleaned))
 
 	return mort, rent
 
@@ -198,7 +195,7 @@ func getSellPrice(collector *rod.Page) int {
 
 func getFloor(collector *rod.Page) int {
 	floor := getNumbersFromSections(`\u0637\u0628\u0642\u0647`, collector)
-	r := regexp.MustCompile(`[\\u06f1-\\u06f9]+`) // numbers are persian
+	r := regexp.MustCompile(`[۱-۹]+`) // numbers are persian
 	return changeFarsiToEng(r.FindString(floor))
 }
 

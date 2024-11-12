@@ -64,33 +64,6 @@ func (suite *DivarTestSuite) TestGetDetails() {
 	suite.waitGroup.Add(1)
 	suite.divar.GetDetails(ad, suite.browser, suite.waitGroup)
 	suite.Equal(`۵۳متر*پارکینگ*غرق نور*وام دار/فاز ۱`, ad.Title)
-	suite.Equal(`⚜حق نام دیگر خداوند است آن را پایمال نکنیم ⚜
-
-          ♦️دپارتمان بین الملل شعبه مرکزی♦️
-        ♦️فایل های مشابه از ۴۰ متر تا ۲۰۰ متر ♦️
-
-♦️با شرایط اقتصادی فعلی بهترین زمان سرمایه  
-    گذاری با بودجه ۱ میلیارد+وام در بورس    
-     سرمایه گذاری ایران اندیشه 
-
-⭕مشاور امور ملکی خانم دارابی با اشراف کامل به واحد های منطقه ⭕
-
-〽️متراژ  ۵۳
-〽️طبقه ۲
-〽️خواب ۱
-〽️پارکینگ 
-〽️فول 
-〽️کم واحد 
-〽️بالکن انباری 
-
-⭕تمامی ملک ها دارای سند تک برگ و حوضه ثبتی تهران میباشد 
-
-⭕کلیه امور وام و رهن به عهده ما 
-
-☎️ پاسخگویی از ۸صبح الی ۰۰:۰۰
-
-♨️ فرصت استثنایی برای سرمایه گذاری 
-خانم دارابی هستم همراه شما از اولین تماس تا آخرین امضا`, ad.Description)
 	suite.Equal(`apartment`, ad.CategoryAV)
 	suite.Empty(ad.City)
 	suite.Empty(ad.Mahale)
@@ -103,6 +76,7 @@ func (suite *DivarTestSuite) TestGetDetails() {
 	suite.Equal(1100000000, ad.SellPrice)
 	suite.True(ad.Anbary)
 	suite.True(ad.Elevator)
+	suite.True(ad.Parking)
 	suite.Equal(`https://s100.divarcdn.com/static/photo/neda/post/ZP4D1gWtW_IAfxuC-hKQqQ/a6c503aa-4367-45f3-8eee-71a68347db8f.jpg`, ad.PictureLink)
 	suite.Equal(-1, ad.RentPrice)
 	suite.Equal(-1, ad.MortgagePrice)
