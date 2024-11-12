@@ -104,6 +104,8 @@ func (suite *DivarTestSuite) TestGetDetails() {
 	suite.True(ad.Anbary)
 	suite.True(ad.Elevator)
 	suite.Equal(`https://s100.divarcdn.com/static/photo/neda/post/ZP4D1gWtW_IAfxuC-hKQqQ/a6c503aa-4367-45f3-8eee-71a68347db8f.jpg`, ad.PictureLink)
+	suite.Equal(-1, ad.RentPrice)
+	suite.Equal(-1, ad.MortgagePrice)
 
 }
 
@@ -136,7 +138,7 @@ func (suite *DivarTestSuite) TestGetLatitudeAndLongitude() {
 	}
 
 	for _, tc := range testCases {
-		lat, long := getLatitudeAndLongitude(tc.input)
+		lat, long := GetLatitudeAndLongitude(tc.input)
 		suite.Equal(tc.expectedLat, lat)
 		suite.Equal(tc.expectedLong, long)
 	}

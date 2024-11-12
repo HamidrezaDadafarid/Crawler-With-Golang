@@ -6,7 +6,6 @@ import (
 	"log"
 	"main/models"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -108,7 +107,9 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	} else {
 		ad.CategoryPMR = `rent`
 		ad.SellPrice = -1
-		// TODO FINISH MORTGAGE & RENT PRICE
+		m, r := getRentAndMortgagePrice(collector)
+		ad.RentPrice = r
+		ad.MortgagePrice = m
 	}
 
 	ad.FloorNumber = getFloor(collector)
@@ -133,26 +134,72 @@ func getPicture(collector *rod.Page) string {
 	return img.MustProperty(`src`).Str()
 }
 
-func cleanPrices(a string) string {
-	return strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(a, `٬`, ``), `تومان`, ``))
+func getChangabale(collector *rod.Page, elem *rod.Element) (int, int) {
+	var (
+		mortPrice int
+		rentPrice int
+	)
+
+	mortelem := elem.MustElement(`td.kt-group-row-item.kt-group-row-item__value.kt-group-row-item--info-row`)
+	mortPriceText := mortelem.MustText()
+
+	if strings.Contains(mortPriceText, `میلیون`) {
+
+		mortPrice = changeFarsiToEng(cleanPrices(strings.ReplaceAll(mortPriceText, `میلیون`, ``)))
+
+	} else {
+
+		mortPrice = changeFarsiToEng(cleanPrices(strings.ReplaceAll(mortPriceText, `میلیارد`, ``)))
+	}
+
+	rentPriceText := mortelem.MustNext().MustText()
+	rentPrice = changeFarsiToEng(cleanPrices(strings.ReplaceAll(rentPriceText, `میلیون`, ``)))
+
+	if rentPrice != -1 {
+		rentPrice *= 1000000
+	}
+
+	return mortPrice * 1000000, rentPrice
+}
+
+func getNormal(collector *rod.Page) (int, int) {
+	var (
+		mort      int
+		rent      int
+		uncleaned string
+	)
+
+	uncleaned = getNumbersFromSections(`^\u0648\u062f\u06cc\u0639\u0647$`, collector) // mortgage price
+	fmt.Println(uncleaned)
+	mort = changeFarsiToEng(uncleaned)
+
+	uncleaned = getNumbersFromSections(`^\u0627\u062c\u0627\u0631\u0647\u0654\u0020\u0645\u0627\u0647\u0627\u0646\u0647$`, collector) // rent price
+	rent = changeFarsiToEng(uncleaned)
+
+	return mort, rent
+
+}
+
+func getRentAndMortgagePrice(collector *rod.Page) (int, int) {
+
+	if ok, elem, _ := collector.Has(`div.convert-slider`); ok {
+		mort, rent := getChangabale(collector, elem)
+		return mort, rent
+	}
+
+	return getNormal(collector)
+
 }
 
 func getSellPrice(collector *rod.Page) int {
-	if ok, section, _ := collector.HasR(`div.kt-base-row.kt-base-row--large.kt-unexpandable-row`, `\u0642\u06cc\u0645\u062a\u0020\u06a9\u0644`); ok {
-		uncleanedPrice := section.MustElement(`p.kt-unexpandable-row__value`).MustText()
-		return changeFarsiToEng(cleanPrices(uncleanedPrice))
-
-	}
-	return -1
+	uncleanedPrice := getNumbersFromSections(`\u0642\u06cc\u0645\u062a\u0020\u06a9\u0644`, collector)
+	return changeFarsiToEng(cleanPrices(uncleanedPrice))
 }
 
 func getFloor(collector *rod.Page) int {
-	if ok, section, _ := collector.HasR(`div.kt-base-row.kt-base-row--large.kt-unexpandable-row`, `\u0637\u0628\u0642\u0647`); ok {
-		floor := section.MustElement(`p.kt-unexpandable-row__value`).MustText()
-		r := regexp.MustCompile(`[\\u06f1-\\u06f9]+`) // since numbers are persian
-		return changeFarsiToEng(r.FindString(floor))
-	}
-	return -1
+	floor := getNumbersFromSections(`\u0637\u0628\u0642\u0647`, collector)
+	r := regexp.MustCompile(`[\\u06f1-\\u06f9]+`) // numbers are persian
+	return changeFarsiToEng(r.FindString(floor))
 }
 
 // These 2 functions should be merged later. they do the same job
@@ -184,23 +231,6 @@ func getCity(collector *rod.Page) string {
 	return ""
 }
 
-func changeFarsiToEng(a string) int {
-	runesOfString := []rune(a)
-	var res []rune
-
-	for i := range runesOfString {
-		res = append(res, runesOfString[i]-1728)
-	}
-
-	val, err := strconv.Atoi(string(res))
-
-	if err != nil {
-		val = -1
-	}
-
-	return val
-}
-
 func getSurfaceAndYearAndRooms(collector *rod.Page) (int, int, int) {
 
 	conds := map[string]int{`متراژ`: -1, `ساخت`: -1, `اتاق`: -1}
@@ -227,23 +257,10 @@ func getSurfaceAndYearAndRooms(collector *rod.Page) (int, int, int) {
 	return surface, year, rooms
 }
 
-func getLatitudeAndLongitude(a string) (float64, float64) {
-	r := regexp.MustCompile(`[0-9][0-9\.]+`)
-	result := r.FindAllString(a, 2)
-	lat, errlat := strconv.ParseFloat(result[0], 64)
-	long, errlong := strconv.ParseFloat(result[1], 64)
-
-	if errlat != nil || errlong != nil {
-		log.Println(`FAILED TO CONVERT TO LATITUDE OR LONGTITUDE\nLINK:` + a)
-		return -1, -1
-	}
-	return lat, long
-}
-
 func getLocation(ad *Advertisement, collector *rod.Page) error {
 	if ok, element, _ := collector.Has(`a.map-cm__attribution.map-cm__button`); ok {
 		loc := element.MustProperty("href").Str()
-		lat, long := getLatitudeAndLongitude(loc)
+		lat, long := GetLatitudeAndLongitude(loc)
 
 		ad.Latitude = lat
 		ad.Longitude = long
