@@ -372,9 +372,26 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 	return c.Send("نحوه خروجی گرفتن را انتخاب کنید", getOutputFileMenu) //TODO: change text message
 }
 
-// TODO
 func (t *Telegram) handleDeleteHistory(c telebot.Context) error {
-	return nil
+	telegram_ID := c.Sender().ID
+	userRepo := repository.NewGormUser(database.GetInstnace().Db)
+	userAdsRepo := repository.NewGormUser_Ad(database.GetInstnace().Db)
+	user, err := userRepo.GetByTelegramID(uint(telegram_ID))
+	if err != nil {
+		return err
+	}
+	userads, err := userAdsRepo.GetByUserId([]uint{user.ID})
+	if err != nil {
+		return err
+	}
+	for _, item := range userads {
+		err = userAdsRepo.Delete(item.User.ID, item.AdId)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.Send("تارخچه شما حذف شد", userMenu)
 }
 
 // -adminMenu handlers

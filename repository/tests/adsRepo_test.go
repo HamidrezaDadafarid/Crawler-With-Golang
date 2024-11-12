@@ -57,15 +57,15 @@ func TestAdsRepo(t *testing.T) {
 	})
 
 	if updateErr != nil {
-		t.Errorf("failed to update advertisement")
+		t.Error("failed to update advertisement ")
 	}
 
 	byIdAd, err := adRepo.GetById([]uint{ad.ID})
 	if err != nil || byIdAd[0].ID != ad.ID {
-		t.Errorf("failed to get by id advertisement")
+		t.Error("failed to get by id advertisement")
 	}
 	if byIdAd[0].Description != "some description updated" {
-		t.Errorf("failed to update advertisement")
+		t.Error("failed to update advertisement")
 	}
 
 	byFilter, err := adRepo.Get(models.Filters{
