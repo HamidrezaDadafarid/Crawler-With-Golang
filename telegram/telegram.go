@@ -7,6 +7,7 @@ import (
 	"main/models"
 	"main/repository"
 	"main/utils"
+	"strconv"
 	"strings"
 	"time"
 
@@ -97,9 +98,13 @@ func (t *Telegram) Start() {
 func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	welcomeMsg := "به ربات خزنده خوش اومدین :)"
 
+	var user models.Users
 	telegram_ID := c.Sender().ID
 	gormUser := repository.NewGormUser(database.GetInstnace().Db)
-	user, _ := gormUser.GetByTelegramID(uint(telegram_ID))
+	user, _ = gormUser.GetByTelegramID(uint(telegram_ID))
+	if user.Role == "" {
+		user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
+	}
 	if user.Role == "user" {
 		userMenu.Reply(
 			userMenu.Row(btnSetFilters, btnShareBookmarks),
@@ -309,10 +314,12 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		return
 	})
 
-	// TODO: insert it into database
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
-		// session := models.GetUserSession(c.Chat().ID)
-		return
+		session := models.GetUserSession(c.Chat().ID)
+		gormFilter := repository.NewGormFilter(database.GetInstnace().Db)
+
+		gormFilter.Add(session.Filters)
+		return c.Send("فیلتر شما با موفقیت ثبت شد", userMenu)
 	})
 
 	// TODO: Hirad
