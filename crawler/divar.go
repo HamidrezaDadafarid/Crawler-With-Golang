@@ -39,7 +39,7 @@ func getUniqueID(a string) string {
 }
 
 // Grabs all targets needed to scrape.
-func (c *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
+func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 
 	visit := fmt.Sprintf(url, page)
 
@@ -55,7 +55,7 @@ func (c *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 
 	for _, aTag := range listOfLinks {
 		link := getUniqueID(aTag.MustProperty("href").Str())
-		ad := &Advertisement{UniqueID: link, Link: "divar", NumberOfViews: 0, Pictures: make([]*models.Pictures, 0)}
+		ad := &Advertisement{UniqueID: link, Link: "divar", NumberOfViews: 0, PictureLink: ""}
 		Ads = append(Ads, ad)
 	}
 
@@ -64,7 +64,7 @@ func (c *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 	return Ads
 }
 
-func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
+func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	collector := bInstance.MustPage("https://divar.ir/v" + ad.UniqueID)
@@ -87,6 +87,10 @@ func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	ok, _, _ = collector.HasR(`td`, `^\u0622\u0633\u0627\u0646\u0633\u0648\u0631$`) // checks for elevator
 
 	ad.Elevator = ok
+
+	ok, _, _ = collector.HasR(`td`, `^\u067e\u0627\u0631\u06a9\u06cc\u0646\u06af$`) // checks for parking
+
+	ad.Parking = ok
 
 	ok, _, _ = collector.HasR(`a.kt-breadcrumbs__action`, `\u0622\u067e\u0627\u0631\u062a\u0645\u0627\u0646`) //  checks for property type
 
@@ -119,7 +123,14 @@ func (c *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	ad.City = getCity(collector)
 	ad.Mahale = getNeighbourhood(collector)
 
+	ad.PictureLink = getPicture(collector)
+
 	fmt.Println(ad)
+}
+
+func getPicture(collector *rod.Page) string {
+	img := collector.MustElement(`img.kt-image-block__image.kt-image-block__image--fading`)
+	return img.MustProperty(`src`).Str()
 }
 
 func cleanPrices(a string) string {

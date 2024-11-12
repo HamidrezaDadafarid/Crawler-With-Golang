@@ -103,6 +103,7 @@ func (suite *DivarTestSuite) TestGetDetails() {
 	suite.Equal(1100000000, ad.SellPrice)
 	suite.True(ad.Anbary)
 	suite.True(ad.Elevator)
+	suite.Equal(`https://s100.divarcdn.com/static/photo/neda/post/ZP4D1gWtW_IAfxuC-hKQqQ/a6c503aa-4367-45f3-8eee-71a68347db8f.jpg`, ad.PictureLink)
 
 }
 

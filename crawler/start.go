@@ -35,7 +35,7 @@ func StartCrawler(page int) {
 			<-sigchan
 
 			log.Println("MANUAL INTERRUPTION / PROGRAM DEATH")
-			rod.Close()
+			rod.MustClose()
 			os.Exit(0)
 		}()
 
