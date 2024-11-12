@@ -101,7 +101,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	var user models.Users
 	telegram_ID := c.Sender().ID
 	gormUser := repository.NewGormUser(database.GetInstnace().Db)
-	user, _ = gormUser.GetByTelegramID(uint(telegram_ID))
+	user, _ = gormUser.GetByTelegramID(strconv.Itoa(int(telegram_ID)))
 	if user.Role == "" {
 		user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
 	}
