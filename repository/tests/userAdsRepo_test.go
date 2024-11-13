@@ -38,7 +38,7 @@ func TestUserAdsRepo(t *testing.T) {
 		Mahale:        "mahale",
 		Meters:        1000,
 		NumberOfRooms: 10,
-		CategoryPMR:   1,
+		CategoryPR:    1,
 		Age:           10,
 		CategoryAV:    2,
 		FloorNumber:   1,
