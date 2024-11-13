@@ -1,4 +1,4 @@
-package crawler
+package tests
 
 import (
 	"main/models"

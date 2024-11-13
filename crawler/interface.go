@@ -32,7 +32,6 @@ func (c *CrawlerAbstract) Start() {
 		c.Wg.Add(1)
 		go c.Crawler.GetDetails(Ads[i], c.Collector, c.Wg)
 
-		// randomSleep := rand.Intn(50) + 2 // To prevent rate-limits
 		time.Sleep(time.Second * 2)
 	}
 	Ads = c.validateItems(Ads)
