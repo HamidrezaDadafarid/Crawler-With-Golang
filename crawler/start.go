@@ -13,7 +13,7 @@ import (
 type rodinstance struct {
 }
 
-func StartCrawler(page int) {
+func StartCrawler(page int, d bool, s bool) {
 	rodInstance := make(chan *rod.Browser, 1)
 
 	var (
@@ -21,7 +21,7 @@ func StartCrawler(page int) {
 	)
 
 	go func() {
-		rodInstance <- rod.New().MustConnect().Trace(true)
+		rodInstance <- rod.New().MustConnect()
 	}()
 
 	select {
@@ -38,9 +38,15 @@ func StartCrawler(page int) {
 			rod.MustClose()
 			os.Exit(0)
 		}()
+		if d {
+			divarCrawler := NewDivarCrawler(page, &waitGroup, rod)
+			divarCrawler.Start()
+		}
 
-		divarCrawler := NewDivarCrawler(page, &waitGroup, rod)
-		divarCrawler.Start()
+		if s {
+			sheypoorCrawler := NewSheypoorCrawler(page, &waitGroup, *&rod)
+			sheypoorCrawler.Start()
+		}
 	}
 
 }

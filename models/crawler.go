@@ -3,7 +3,7 @@ package models
 import (
 	"sync"
 	"time"
-
+	"main/repository"
 	"github.com/go-rod/rod"
 )
 
@@ -31,11 +31,13 @@ func (c *CrawlerAbstract) Start() {
 		time.Sleep(time.Second * 2)
 	}
 	Ads = c.validateItems(Ads)
-	c.sendDataToDB()
+	c.sendDataToDB(Ads)
 }
 
-func (c *CrawlerAbstract) sendDataToDB() {
-
+func (c *CrawlerAbstract) sendDataToDB(a []*Ads) {
+	for _ , ad := range a {
+		db.Add(&ad)
+	}
 }
 
 func (b *CrawlerAbstract) validateItems(adList []*Ads) []*Ads {

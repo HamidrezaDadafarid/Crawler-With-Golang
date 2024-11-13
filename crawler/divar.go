@@ -11,7 +11,7 @@ import (
 	"github.com/go-rod/rod"
 )
 
-const url string = "https://divar.ir/s/iran/real-estate?page=%d"
+const urlDivar string = "https://divar.ir/s/iran/real-estate?page=%d"
 
 type Advertisement = models.Ads
 
@@ -31,7 +31,7 @@ func NewDivarCrawler(page int, wg *sync.WaitGroup, col *rod.Browser) *models.Cra
 
 // Takes uniqueID from the link
 func getUniqueID(a string) string {
-	r := regexp.MustCompile(`\/[a-zA-Z0-9_-]+$`)
+	r := regexp.MustCompile(`\/[a-zA-Z0-9_-]+$|[0-9]{5,}`)
 
 	return r.FindString(a)
 }
@@ -39,9 +39,9 @@ func getUniqueID(a string) string {
 // Grabs all targets needed to scrape.
 func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 
-	visit := fmt.Sprintf(url, page)
+	visit := fmt.Sprintf(urlDivar, page)
 
-	log.Println("GRABBING TARGETS:", visit)
+	log.Println("GRABBING TARGETS | [DIVAR]:", visit)
 
 	var Ads []*Advertisement
 
@@ -53,7 +53,7 @@ func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 
 	for _, aTag := range listOfLinks {
 		link := getUniqueID(aTag.MustProperty("href").Str())
-		ad := &Advertisement{UniqueId: link, Link: "divar", NumberOfViews: 0, PictureLink: ""}
+		ad := &Advertisement{UniqueId: link, Link: "divar", NumberOfViews: 0}
 		Ads = append(Ads, ad)
 	}
 
