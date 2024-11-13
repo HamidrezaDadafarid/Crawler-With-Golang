@@ -102,6 +102,20 @@ func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
 	return telegram, nil
 }
 
+type TelegramRciver struct {
+	Id string
+}
+
+func (reciver *TelegramRciver) Recipient() string {
+	return reciver.Id
+}
+
+func (t *Telegram) SendMessageToUser(idReciver string, message interface{}) {
+	t.Bot.Send(&TelegramRciver{
+		Id: idReciver,
+	}, message)
+}
+
 func (t *Telegram) registerHandlers() {
 	t.Bot.Handle("/start", t.handleStart)
 	t.Bot.Handle(telebot.OnText, t.handleText)
