@@ -11,6 +11,7 @@ type User interface {
 	Delete(id uint) error
 	Get(ids []uint) ([]models.Users, error)
 	GetByTelegramId(telegramId string) (models.Users, error)
+	GetByUsername(username string) (models.Users, error)
 	Update(user models.Users) error
 }
 
@@ -43,6 +44,12 @@ func (g *gormUser) Get(ids []uint) ([]models.Users, error) {
 func (g *gormUser) GetByTelegramId(telegramId string) (models.Users, error) {
 	var user models.Users
 	result := g.Db.First(&user, "telegram_id = ?", telegramId)
+	return user, result.Error
+}
+
+func (g *gormUser) GetByUsername(username string) (models.Users, error) {
+	var user models.Users
+	result := g.Db.First(&user, "username = ?", username)
 	return user, result.Error
 }
 

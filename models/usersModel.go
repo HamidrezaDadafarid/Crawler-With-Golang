@@ -8,6 +8,7 @@ type Users struct {
 	gorm.Model
 	ID               uint `gorm:"primaryKey;autoIncrement"`
 	TelegramId       string
+	Username         string
 	Role             string
 	MaxSearchedItems uint
 	TimeLimit        uint

@@ -1,7 +1,11 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"main/models"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -45,4 +49,31 @@ func ParseDateRanges(input string) (time.Time, time.Time, error) {
 	}
 
 	return minDate, maxDate, nil
+}
+
+func CheckUsernameExists(botToken, username string) (bool, error) {
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/getChat?chat_id=@%s", botToken, username)
+
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return false, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("error reading response: %v", err)
+	}
+
+	var tgResp models.TelegramResponse
+	if err := json.Unmarshal(body, &tgResp); err != nil {
+		return false, fmt.Errorf("error parsing JSON: %v", err)
+	}
+
+	if tgResp.Ok {
+		return true, nil
+	}
+
+	return false, nil
 }

@@ -124,7 +124,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	if user.Role == "" {
 		user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
 	}
-	if user.Role == "user" {
+	if user.Role == "User" {
 		userMenu.Reply(
 			userMenu.Row(btnSetFilters, btnShareBookmarks),
 			userMenu.Row(btnGetOutputFile, btnDeleteHistory),
@@ -137,7 +137,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 
 		err = c.Send(welcomeMsg, userMenu)
 
-	} else if user.Role == "admin" {
+	} else if user.Role == "Admin" {
 		adminMenu.Reply(
 			adminMenu.Row(btnSeeCrawlDetails),
 		)
@@ -422,34 +422,37 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 
 // -adminMenu handlers
 // TODO
-func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) error {
+func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) (err error) {
 	return nil
 }
 
-// Super admin menu handlers
-// TODO
-func (t *Telegram) handleAddAdmin(c telebot.Context) error {
-	return nil
+// superAdmin menu handlers
+func (t *Telegram) handleAddAdmin(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "adding_admin"
+	err = c.Send("لطفا آیدی تلگرام کاربر مورد نظر خود را وارد کنید")
+	return
 }
 
 // TODO
-func (t *Telegram) handleManageAdmins(c telebot.Context) error {
-	return nil
-}
-
-// TODO
-func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) error {
+func (t *Telegram) handleManageAdmins(c telebot.Context) (err error) {
 	return nil
 }
 
 // TODO
-func (t *Telegram) handleSetNumberOfAds(c telebot.Context) error {
+func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) (err error) {
+	return nil
+}
+
+// TODO
+func (t *Telegram) handleSetNumberOfAds(c telebot.Context) (err error) {
 	return nil
 }
 
 func (t *Telegram) handleText(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	input := c.Text()
+	lowerInput := strings.ToLower(strings.TrimSpace(input))
 
 	switch session.State {
 	case "setting_city":
@@ -560,7 +563,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 	case "setting_storage":
 		if input != "بله" && input != "خیر" {
 			err = c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
-			t.Loggers.ErrorLogger.Println("invalid input for storage exsistence")
+			t.Loggers.InfoLogger.Println("invalid input for storage exsistence")
 			return
 		}
 
@@ -662,15 +665,47 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 	case "setting_user_email":
 		emailRegex := regexp.MustCompile(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)
 		if !emailRegex.Match([]byte(input)) {
-			err = c.Send("ایمیل نا معتبر است دوباره امتحان کنید")
-			t.Loggers.ErrorLogger.Println("invalid email input")
+			err = c.Send("ایمیل نامعتبر است دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("invalid email input")
 			return
 		}
-
 		session.State = ""
 		session.Email = input
 		err = c.Send("ایمیل شما ثبت شد", userMenu)
 		t.Loggers.InfoLogger.Println("user's email set")
+
+	case "adding_admin":
+		userNamePattern := `^[a-zA-Z_][a-zA-Z0-9_]{4,31}$`
+		re := regexp.MustCompile(userNamePattern)
+		if !re.MatchString(lowerInput) {
+			err = c.Send("یوزرنیم نامعتبر است دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("invalid username input")
+			return
+		}
+		exists, e := utils.CheckUsernameExists(t.Bot.Token, lowerInput)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println(e.Error())
+			return
+		} else if !exists {
+			err = c.Send("کاربری با آیدی مورد نظر موجود نمی باشد لطفا دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("user does not exists with this username input")
+			return
+		} else {
+			gormUser := repository.NewGormUser(database.GetInstnace().Db)
+			user, _ := gormUser.GetByUsername(lowerInput)
+			user.Role = "Admin"
+			e := gormUser.Update(user)
+			if e != nil {
+				err = e
+				t.Loggers.ErrorLogger.Println("error updating user's role")
+				return
+			}
+			err = c.Send("نقش کاربر مورد نظر به ادمین تغییر یافت")
+			t.Loggers.InfoLogger.Println("user's role changed to admin")
+			session.State = ""
+			return
+		}
 
 	default:
 		err = c.Send("لطفا از منو آیتم مورد نظر خود را را انتخاب کنید")

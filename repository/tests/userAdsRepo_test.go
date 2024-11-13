@@ -18,6 +18,7 @@ func TestUserAdsRepo(t *testing.T) {
 	addedUser, err := userRepo.Add(models.Users{
 		TelegramId:       "telegram id",
 		Role:             "User",
+		Username:         "username",
 		MaxSearchedItems: 10,
 		TimeLimit:        100,
 	})
