@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"main/database"
+	logg "main/log"
 	"main/models"
 	"main/repository"
 	"main/utils"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -19,8 +21,9 @@ type TelegramConfig struct {
 }
 
 type Telegram struct {
-	Bot    *telebot.Bot
-	Config *TelegramConfig
+	Bot     *telebot.Bot
+	Config  *TelegramConfig
+	Loggers logg.TelegramLogger
 }
 
 var (
@@ -76,9 +79,23 @@ func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
 		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
 
+	logFile, err := os.Create("../log/telegram.log")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create telegram log file: %w", err)
+	}
+
+	infoLogger := log.New(logFile, "INFO: ", log.LstdFlags)
+	errorLogger := log.New(logFile, "ERROR: ", log.LstdFlags)
+
+	telegramLogger := logg.TelegramLogger{
+		InfoLogger:  infoLogger,
+		ErrorLogger: errorLogger,
+	}
+
 	telegram := &Telegram{
-		Bot:    bot,
-		Config: config,
+		Bot:     bot,
+		Config:  config,
+		Loggers: telegramLogger,
 	}
 
 	return telegram, nil
@@ -91,7 +108,7 @@ func (t *Telegram) registerHandlers() {
 
 func (t *Telegram) Start() {
 	t.registerHandlers()
-	log.Println("Starting Telegram bot...")
+	t.Loggers.InfoLogger.Println("Starting Telegram bot...")
 	t.Bot.Start()
 }
 
@@ -99,12 +116,13 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	welcomeMsg := "به ربات خزنده خوش اومدین :)"
 
 	var user models.Users
-	// telegram_ID := c.Sender().ID
-	// gormUser := repository.NewGormUser(database.GetInstnace().Db)
-	// user, _ = gormUser.GetByTelegramID(strconv.Itoa(int(telegram_ID)))
-	// if user.Role == "" {
-	// 	user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
-	// }
+	// user.Role = "user"
+	telegram_ID := c.Sender().ID
+	gormUser := repository.NewGormUser(database.GetInstnace().Db)
+	user, _ = gormUser.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
+	if user.Role == "" {
+		user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
+	}
 	if user.Role == "user" {
 		userMenu.Reply(
 			userMenu.Row(btnSetFilters, btnShareBookmarks),
@@ -322,7 +340,6 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		return c.Send("فیلتر شما با موفقیت ثبت شد", userMenu)
 	})
 
-	// TODO: Hirad
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
@@ -369,29 +386,34 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 		return
 	})
-	return c.Send("نحوه خروجی گرفتن را انتخاب کنید", getOutputFileMenu) //TODO: change text message
+	return c.Send("نحوه خروجی گرفتن را انتخاب کنید", getOutputFileMenu)
 }
 
-func (t *Telegram) handleDeleteHistory(c telebot.Context) error {
+func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 	telegram_ID := c.Sender().ID
 	userRepo := repository.NewGormUser(database.GetInstnace().Db)
 	userAdsRepo := repository.NewGormUser_Ad(database.GetInstnace().Db)
-	user, err := userRepo.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
-	if err != nil {
-		return err
+	user, e := userRepo.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
+	if e != nil {
+		err = e
+		return
 	}
-	userAds, err := userAdsRepo.GetByUserId([]uint{user.ID})
-	if err != nil {
-		return err
+	userAds, e := userAdsRepo.GetByUserId([]uint{user.ID})
+	if e != nil {
+		err = e
+		return
 	}
 	for _, item := range userAds {
-		err = userAdsRepo.Delete(item.User.ID, item.AdId)
-		if err != nil {
-			return err
+		e = userAdsRepo.Delete(item.User.ID, item.AdId)
+		if e != nil {
+			err = e
+			return
 		}
 	}
 
-	return c.Send("تارخچه شما حذف شد", userMenu)
+	err = c.Send("تاریخچه شما حذف شد", userMenu)
+	t.Loggers.InfoLogger.Println("user history deleted")
+	return
 }
 
 // -adminMenu handlers
@@ -433,6 +455,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.City = strings.TrimSpace(strings.ToLower(input))
 		session.State = ""
 		err = c.Send("شهر مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("set city")
 
 	case "setting_neighborhood":
 		if session.Filters.Neighborhood == nil {
@@ -441,11 +464,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.Neighborhood = strings.TrimSpace(strings.ToLower(input))
 		session.State = ""
 		err = c.Send("محله مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("set neighborhood")
 
 	case "setting_area":
 		minArea, maxArea, e := utils.ParseRanges(input)
 		if e != nil {
 			err = c.Send(e.Error())
+			t.Loggers.ErrorLogger.Println("parsing area range")
 			return
 		}
 		if session.Filters.StartArea == nil || session.Filters.EndArea == nil {
@@ -456,11 +481,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndArea = maxArea
 		session.State = ""
 		err = c.Send("بازه متراژ مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("area range set")
 
 	case "setting_number_of_rooms":
 		minNumberOfRooms, maxNumberOfRooms, e := utils.ParseRanges(input)
 		if e != nil {
 			err = c.Send(e.Error())
+			t.Loggers.ErrorLogger.Println("parsing number of rooms range")
 			return
 		}
 		if session.Filters.StartNumberOfRooms == nil || session.Filters.EndNumberOfRooms == nil {
@@ -471,11 +498,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndNumberOfRooms = maxNumberOfRooms
 		session.State = ""
 		err = c.Send("بازه تعداد اتاق خواب مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("number of rooms range set")
 
 	case "setting_age":
 		minAge, maxAge, e := utils.ParseRanges(input)
 		if e != nil {
 			err = c.Send(e.Error())
+			t.Loggers.ErrorLogger.Println("parsing building age range")
 			return
 		}
 		if session.Filters.StartAge == nil || session.Filters.EndAge == nil {
@@ -486,10 +515,12 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndAge = maxAge
 		session.State = ""
 		err = c.Send("بازه سن بنا ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("building age range set")
 
 	case "setting_category_AV":
 		if input != "آپارتمانی" && input != "ویلایی" {
 			err = c.Send("دسته بندی نامعتبر است. لطفا دوباره امتحان کنید")
+			t.Loggers.ErrorLogger.Println("invalid input for AV-category")
 			return
 		}
 
@@ -503,11 +534,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		}
 		session.State = ""
 		err = c.Send("دسته بندی مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("AV-category set")
 
 	case "setting_floor_number":
 		minFloorNumber, maxFloorNumber, e := utils.ParseRanges(input)
 		if e != nil {
 			err = c.Send(e.Error())
+			t.Loggers.ErrorLogger.Println("parsing floor number range")
 			return
 		}
 		if session.Filters.StartFloorNumber == nil || session.Filters.EndFloorNumber == nil {
@@ -518,10 +551,12 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndFloorNumber = maxFloorNumber
 		session.State = ""
 		err = c.Send("بازه تعداد طبقه مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("floor number range set")
 
 	case "setting_storage":
 		if input != "بله" && input != "خیر" {
 			err = c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
+			t.Loggers.ErrorLogger.Println("invalid input for storage exsistence")
 			return
 		}
 
@@ -535,10 +570,12 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		}
 		session.State = ""
 		err = c.Send("ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("storage exsistence set")
 
 	case "setting_elevator":
 		if input != "بله" && input != "خیر" {
 			err = c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
+			t.Loggers.ErrorLogger.Println("invalid input for elevator exsistence")
 			return
 		}
 
@@ -551,7 +588,8 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			*session.Filters.Elevator = false
 		}
 		session.State = ""
-		_ = c.Send("ثبت شد", filterMenu)
+		err = c.Send("ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("elevator exsistence set")
 
 	case "setting_ad_date":
 		minDate, maxDate, e := utils.ParseDateRanges(input)
@@ -567,11 +605,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndDate = maxDate
 		session.State = ""
 		err = c.Send("بازه تاریخ ثبت آگهی مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("ad date range set")
 
 	case "setting_purchase_price":
 		minPurchasePrice, maxPurchasePrice, e := utils.ParseRanges(input)
 		if e != nil {
 			err = e
+			t.Loggers.ErrorLogger.Println("parsing purchase price range")
 			return
 		}
 		if session.Filters.StartPurchasePrice == nil || session.Filters.EndPurchasePrice == nil {
@@ -582,12 +622,14 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndPurchasePrice = maxPurchasePrice
 		session.State = ""
 		err = c.Send("بازه قیمت خرید مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("purchase price range set")
 
 	case "setting_rent_price":
 		ranges := strings.Split(strings.TrimSpace(input), " ")
 		minRentPrice, maxRentPrice, e := utils.ParseRanges(ranges[0])
 		if e != nil {
 			err = e
+			t.Loggers.ErrorLogger.Println("parsing rent price range")
 			return
 		}
 		if session.Filters.StartRentPrice == nil || session.Filters.EndRentPrice == nil {
@@ -600,6 +642,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		minMortgagePrice, maxMortgagePrice, e := utils.ParseRanges(ranges[1])
 		if e != nil {
 			err = e
+			t.Loggers.ErrorLogger.Println("parsing mortgage price range")
 			return
 		}
 		if session.Filters.StartMortgagePrice == nil || session.Filters.EndMortgagePrice == nil {
@@ -610,6 +653,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		*session.Filters.EndMortgagePrice = maxMortgagePrice
 		session.State = ""
 		err = c.Send("بازه قیمت مورد نظر ثبت شد", filterMenu)
+		t.Loggers.InfoLogger.Println("rent and mortgage price range set")
 
 	default:
 		err = c.Send("لطفا از منو آیتم مورد نظر خود را را انتخاب کنید")

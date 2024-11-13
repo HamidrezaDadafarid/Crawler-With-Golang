@@ -69,7 +69,7 @@ func ExportCsv(telID string, db *gorm.DB) (string, error) {
 					} else {
 						fieldValue = fmt.Sprintf("%v", field.Interface())
 					}
-				} else if i == 21 || i == 22 { // Check for boolean fields Anbary and Elevator
+				} else if i == 21 || i == 22 { // Check for boolean fields Storage and Elevator
 					if field.Interface().(bool) {
 						fieldValue = "دارد"
 					} else {
