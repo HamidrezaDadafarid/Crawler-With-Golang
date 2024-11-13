@@ -3,7 +3,9 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"main/csv"
 	"main/database"
+	"main/email"
 	logg "main/log"
 	"main/models"
 	"main/repository"
@@ -671,6 +673,17 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		}
 		session.State = ""
 		session.Email = input
+
+		filename, err := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+
+		if err != nil {
+			t.Loggers.ErrorLogger.Println("exporting csv failed: ", err)
+		}
+
+		err = email.SendEmail(session.Email, filename)
+		if err != nil {
+			t.Loggers.ErrorLogger.Println("sending email failed: ", err)
+		}
 		err = c.Send("ایمیل شما ثبت شد", userMenu)
 		t.Loggers.InfoLogger.Println("user's email set")
 
