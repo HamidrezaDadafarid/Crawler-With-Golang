@@ -16,11 +16,11 @@ const urlDivar string = "https://divar.ir/s/iran/real-estate?page=%d"
 type Advertisement = models.Ads
 
 type divar struct {
-	*models.CrawlerAbstract
+	*CrawlerAbstract
 }
 
-func NewDivarCrawler(page int, wg *sync.WaitGroup, col *rod.Browser) *models.CrawlerAbstract {
-	d := models.CrawlerAbstract{
+func NewDivarCrawler(page int, wg *sync.WaitGroup, col *rod.Browser) *CrawlerAbstract {
+	d := CrawlerAbstract{
 		Crawler:   &divar{},
 		Page:      page,
 		Wg:        wg,

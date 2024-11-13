@@ -1,16 +1,21 @@
-package models
+package crawler
 
 import (
+	"main/database"
+	"main/models"
+	"main/repository"
 	"sync"
 	"time"
-	"main/repository"
+
 	"github.com/go-rod/rod"
 )
+
+type Ads = models.Ads
 
 type Crawler interface {
 	GetTargets(page int, collector *rod.Browser) []*Ads
 	GetDetails(*Ads, *rod.Browser, *sync.WaitGroup)
-} // TODO types should be added after ad structs are finished
+}
 
 type CrawlerAbstract struct {
 	Page      int
@@ -35,8 +40,9 @@ func (c *CrawlerAbstract) Start() {
 }
 
 func (c *CrawlerAbstract) sendDataToDB(a []*Ads) {
-	for _ , ad := range a {
-		db.Add(&ad)
+	g := repository.NewGormAd(database.GetInstnace().Db)
+	for _, ad := range a {
+		g.Add(*ad)
 	}
 }
 

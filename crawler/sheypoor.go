@@ -3,20 +3,19 @@ package crawler
 import (
 	"fmt"
 	"log"
-	"main/models"
 	"sync"
 
 	"github.com/go-rod/rod"
 )
 
 type sheypoor struct {
-	*models.CrawlerAbstract
+	*CrawlerAbstract
 }
 
 const urlSheypoor = "https://www.sheypoor.com/s/iran/real-estate?page=%d"
 
-func NewSheypoorCrawler(page int, wg *sync.WaitGroup, col *rod.Browser) *models.CrawlerAbstract {
-	d := models.CrawlerAbstract{
+func NewSheypoorCrawler(page int, wg *sync.WaitGroup, col *rod.Browser) *CrawlerAbstract {
+	d := CrawlerAbstract{
 		Crawler:   &sheypoor{},
 		Page:      page,
 		Wg:        wg,
@@ -72,7 +71,7 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 
 	if ok, _, _ := collector.HasR(`a.qL9GS`, `رهن و اجاره`); ok {
 		ad.CategoryPR = 1
-		
+
 	} else {
 		ad.CategoryPR = 0
 		sellPrice := changeFarsiToEng(collector.MustElement(`span.l29r1`).MustText())
