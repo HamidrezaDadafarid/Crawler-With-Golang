@@ -9,6 +9,7 @@ import (
 	"main/repository"
 	"main/utils"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -79,7 +80,7 @@ func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
 		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
 
-	logFile, err := os.Create("../log/telegram.log")
+	logFile, err := os.Create("log/telegram.log")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create telegram log file: %w", err)
 	}
@@ -372,10 +373,13 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 	t.Bot.Handle(&btnGetOutputFile, func(c telebot.Context) (err error) {
 		return
 	})
-	// TODO
+
 	t.Bot.Handle(&btnGetViaEmail, func(c telebot.Context) (err error) {
+		session.State = "setting_user_email"
+		err = c.Send("لطفا ایمیل خود را وارد کنید")
 		return
 	})
+
 	t.Bot.Handle(&btnBackGetOutputFileMenu, func(c telebot.Context) (err error) {
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
@@ -654,6 +658,19 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		err = c.Send("بازه قیمت مورد نظر ثبت شد", filterMenu)
 		t.Loggers.InfoLogger.Println("rent and mortgage price range set")
+
+	case "setting_user_email":
+		emailRegex := regexp.MustCompile(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)
+		if !emailRegex.Match([]byte(input)) {
+			err = c.Send("ایمیل نا معتبر است دوباره امتحان کنید")
+			t.Loggers.ErrorLogger.Println("invalid email input")
+			return
+		}
+
+		session.State = ""
+		session.Email = input
+		err = c.Send("ایمیل شما ثبت شد", userMenu)
+		t.Loggers.InfoLogger.Println("user's email set")
 
 	default:
 		err = c.Send("لطفا از منو آیتم مورد نظر خود را را انتخاب کنید")

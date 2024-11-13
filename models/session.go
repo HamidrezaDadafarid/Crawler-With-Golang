@@ -1,9 +1,10 @@
 package models
 
 type UserSession struct {
-	ChatID  int64
 	Filters Filters
+	Email   string
 	State   string
+	ChatID  int64
 }
 
 var userSessions = make(map[int64]*UserSession)
