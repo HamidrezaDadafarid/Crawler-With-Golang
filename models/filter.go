@@ -2,11 +2,12 @@ package models
 
 import (
     "errors"
+    "strings"
     "gorm.io/gorm"
 )
 
 type Filter struct {
-    FilterID           int    `json:"filter_id" gorm:"primaryKey"`
+    FilterID           uint   `json:"filter_id" gorm:"primaryKey"`
     NumberOfRequests   uint   `json:"number_of_requests"`
     StartPrice         uint   `json:"start_price"`
     EndPrice           uint   `json:"end_price"`
@@ -26,52 +27,52 @@ type Filter struct {
     Elevator           bool   `json:"elevator"`
     StartDate          string `json:"start_date"`
     EndDate            string `json:"end_date"`
-    Category2          string `json:"category2"`
+}
+
+func (f *Filter) Normalize() {
+    f.City = strings.ToLower(f.City)
+    f.Neighborhood = strings.ToLower(f.Neighborhood)
+}
+
+func (f *Filter) Validate() error {
+    if f.StartPrice > f.EndPrice {
+        return errors.New("start_price cannot be greater than end_price")
+    }
+    if f.StartArea > f.EndArea {
+        return errors.New("start_area cannot be greater than end_area")
+    }
+    if f.StartNumberOfRooms > f.EndNumberOfRooms {
+        return errors.New("start_number_of_rooms cannot be greater than end_number_of_rooms")
+    }
+    if f.StartAge > f.EndAge {
+        return errors.New("start_age cannot be greater than end_age")
+    }
+    if f.StartFloorNumber > f.EndFloorNumber {
+        return errors.New("start_floor_number cannot be greater than end_floor_number")
+    }
+    return nil
 }
 
 func (f *Filter) Create(db *gorm.DB) error {
-    if db == nil {
-        return errors.New("database connection is nil")
+    f.Normalize()
+    if err := f.Validate(); err != nil {
+        return err
     }
     return db.Create(f).Error
 }
 
-func (f *Filter) Get(db *gorm.DB, id int) error {
-    if db == nil {
-        return errors.New("database connection is nil")
-    }
+func (f *Filter) GetByID(db *gorm.DB, id uint) error {
     return db.First(f, id).Error
 }
 
 func (f *Filter) Update(db *gorm.DB) error {
-    if db == nil {
-        return errors.New("database connection is nil")
+    f.Normalize()
+    if err := f.Validate(); err != nil {
+        return err
     }
     return db.Save(f).Error
 }
 
 func (f *Filter) Delete(db *gorm.DB) error {
-    if db == nil {
-        return errors.New("database connection is nil")
-    }
     return db.Delete(f).Error
-}
-
-func ListFilters(db *gorm.DB) ([]Filter, error) {
-    var filters []Filter
-    if db == nil {
-        return filters, errors.New("database connection is nil")
-    }
-    err := db.Find(&filters).Error
-    return filters, err
-}
-
-func (f *Filter) Normalize() {
-    f.City = normalizeText(f.City)
-    f.Neighborhood = normalizeText(f.Neighborhood)
-}
-
-func normalizeText(text string) string {
-    // Implement normalization logic here if needed
-    return text
 }
