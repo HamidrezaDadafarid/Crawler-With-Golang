@@ -25,13 +25,13 @@ This project is a web crawling system written in Go that collects real estate ad
 - **go-redis**: Library used for connecting to Redis.
 - **Telegram Bot API**: For Telegram integration to handle user commands.
 
----
+
 
 ## ERD (Entity Relationship Diagram)
 
 The ERD below illustrates the overall structure of the database, including the entities `Users`, `Filters`, `Ads`, `WatchList`, and `Users_Ads`. Each entity plays a critical role in storing and managing project information.
 
-![ERD](path/to/your/ERD-image.png)  <!-- Add the path to the ERD image if available -->
+---![IMAGE 1403-08-25 02:20:44](https://github.com/user-attachments/assets/1a6bdfda-84a9-4e75-84bf-ce28b4456311)
 
 ---
 
