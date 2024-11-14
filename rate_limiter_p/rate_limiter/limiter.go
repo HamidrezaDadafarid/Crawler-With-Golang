@@ -9,6 +9,7 @@ import (
     "github.com/go-redis/redis/v8"
 )
 
+var ctx = context.Background()
 
 func InitRedis() *redis.Client {
     rdb := redis.NewClient(&redis.Options{
@@ -31,8 +32,6 @@ func CheckRateLimit(rdb *redis.Client, userID string, role string) (bool, error)
         return false, fmt.Errorf("failed to increment rate limit counter: %w", err)
     }
 
-
-    if count == 1 {
         if err := rdb.Expire(ctx, key, time.Minute).Err(); err != nil {
             return false, fmt.Errorf("failed to set expiration for rate limit key: %w", err)
         }
