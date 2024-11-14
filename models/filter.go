@@ -3,7 +3,6 @@ package models
 import (
     "errors"
     "strings"
-    "gorm.io/gorm"
 )
 
 type Filter struct {
@@ -51,28 +50,4 @@ func (f *Filter) Validate() error {
         return errors.New("start_floor_number cannot be greater than end_floor_number")
     }
     return nil
-}
-
-func (f *Filter) Create(db *gorm.DB) error {
-    f.Normalize()
-    if err := f.Validate(); err != nil {
-        return err
-    }
-    return db.Create(f).Error
-}
-
-func (f *Filter) GetByID(db *gorm.DB, id uint) error {
-    return db.First(f, id).Error
-}
-
-func (f *Filter) Update(db *gorm.DB) error {
-    f.Normalize()
-    if err := f.Validate(); err != nil {
-        return err
-    }
-    return db.Save(f).Error
-}
-
-func (f *Filter) Delete(db *gorm.DB) error {
-    return db.Delete(f).Error
 }
