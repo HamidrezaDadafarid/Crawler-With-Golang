@@ -12,8 +12,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
     if err != nil {
         t.Fatalf("failed to connect to test database: %v", err)
     }
-    // Migrate both Filter and User models
-    if err := db.AutoMigrate(&models.Filter{}, &models.User{}); err != nil {
+    if err := db.AutoMigrate(&models.Filter{}); err != nil {
         t.Fatalf("failed to migrate database: %v", err)
     }
     return db
@@ -22,11 +21,16 @@ func setupTestDB(t *testing.T) *gorm.DB {
 func TestCreateFilter(t *testing.T) {
     db := setupTestDB(t)
     filter := models.Filter{
-        City:            "Tehran",
-        StartPrice:      100000,
-        EndPrice:        500000,
+        StartPrice: 100000,
+        EndPrice: 500000,
+        City: "Tehran",
         StartNumberOfRooms: 1,
         EndNumberOfRooms: 3,
+    }
+
+    filter.Normalize()
+    if err := filter.Validate(); err != nil {
+        t.Errorf("validation failed: %v", err)
     }
 
     if err := filter.Create(db); err != nil {
@@ -36,39 +40,43 @@ func TestCreateFilter(t *testing.T) {
 
 func TestGetFilter(t *testing.T) {
     db := setupTestDB(t)
-    filter := models.Filter{City: "Tehran"}
+    filter := models.Filter{City: "Tehran", StartPrice: 100000, EndPrice: 500000}
     db.Create(&filter)
 
     var fetchedFilter models.Filter
-    if err := fetchedFilter.Get(db, filter.FilterID); err != nil {
+    if err := fetchedFilter.GetByID(db, filter.FilterID); err != nil {
         t.Errorf("failed to get filter: %v", err)
     }
 
-    if fetchedFilter.City != "Tehran" {
-        t.Errorf("expected city 'Tehran', got %v", fetchedFilter.City)
+    if fetchedFilter.City != "tehran" {
+        t.Errorf("expected city 'tehran', got %v", fetchedFilter.City)
     }
 }
 
 func TestUpdateFilter(t *testing.T) {
     db := setupTestDB(t)
-    filter := models.Filter{City: "Tehran"}
+    filter := models.Filter{City: "Tehran", StartPrice: 100000, EndPrice: 500000}
     db.Create(&filter)
 
     filter.City = "Mashhad"
+    filter.Normalize()
+    if err := filter.Validate(); err != nil {
+        t.Errorf("validation failed: %v", err)
+    }
     if err := filter.Update(db); err != nil {
         t.Errorf("failed to update filter: %v", err)
     }
 
     var updatedFilter models.Filter
     db.First(&updatedFilter, filter.FilterID)
-    if updatedFilter.City != "Mashhad" {
-        t.Errorf("expected city 'Mashhad', got %v", updatedFilter.City)
+    if updatedFilter.City != "mashhad" {
+        t.Errorf("expected city 'mashhad', got %v", updatedFilter.City)
     }
 }
 
 func TestDeleteFilter(t *testing.T) {
     db := setupTestDB(t)
-    filter := models.Filter{City: "Tehran"}
+    filter := models.Filter{City: "Tehran", StartPrice: 100000, EndPrice: 500000}
     db.Create(&filter)
 
     if err := filter.Delete(db); err != nil {
@@ -76,7 +84,22 @@ func TestDeleteFilter(t *testing.T) {
     }
 
     var fetchedFilter models.Filter
-    if err := fetchedFilter.Get(db, filter.FilterID); err == nil {
+    if err := fetchedFilter.GetByID(db, filter.FilterID); err == nil {
         t.Errorf("expected error, got nil")
+    }
+}
+
+func TestFilterValidation(t *testing.T) {
+    filter := models.Filter{
+        StartPrice: 500000,
+        EndPrice: 100000,
+        StartArea: 150,
+        EndArea: 100,
+    }
+
+    filter.Normalize()
+    err := filter.Validate()
+    if err == nil {
+        t.Errorf("expected validation error for invalid price and area ranges, got nil")
     }
 }
