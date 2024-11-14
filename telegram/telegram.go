@@ -37,9 +37,8 @@ var (
 	btnManageAdmins      = superAdminMenu.Text("مدیریت کردن ادمین ها")
 	btnSetNumberOfAds    = superAdminMenu.Text("تنظیم تعداد آیتم های جستجو شده")
 	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
-
-	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnSeeCrawlDetails = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
+	adminMenu            = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnSeeCrawlDetails   = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
 
 	userMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnBookmarkAd     = userMenu.Text("اضافه کردن آگهی به لیست علاقه مندی ها")
