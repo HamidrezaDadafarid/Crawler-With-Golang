@@ -7,7 +7,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 )
 
-require github.com/scorredoira/email v0.0.0-20191107070024-dc7b732c55da // indirect
+require github.com/scorredoira/email v0.0.0-20191107070024-dc7b732c55da
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

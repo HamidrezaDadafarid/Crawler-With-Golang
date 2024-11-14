@@ -39,9 +39,10 @@ var (
 	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
 
 	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnSeeCrawlDetails = superAdminMenu.Text("See Crawl Details")
+	btnSeeCrawlDetails = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
 
 	userMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnBookmarkAd     = userMenu.Text("اضافه کردن آگهی به لیست علاقه مندی ها")
 	btnSetFilters     = userMenu.Text("ثبت فیلتر")
 	btnShareBookmarks = userMenu.Text("اشتراک گذاری آگهی های مورد علاقه")
 	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
@@ -128,7 +129,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	}
 	if user.Role == "user" {
 		userMenu.Reply(
-			userMenu.Row(btnSetFilters, btnShareBookmarks),
+			userMenu.Row(btnSetFilters, btnShareBookmarks, btnBookmarkAd),
 			userMenu.Row(btnGetOutputFile, btnDeleteHistory),
 		)
 
@@ -136,6 +137,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
 		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
 		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+		t.Bot.Handle(&btnBookmarkAd, t.handleBookmarkAd)
 
 		err = c.Send(welcomeMsg, userMenu)
 
@@ -419,6 +421,11 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 
 	err = c.Send("تاریخچه شما حذف شد", userMenu)
 	t.Loggers.InfoLogger.Println("user history deleted")
+	return
+}
+
+// TODO Hirad: handle bookmark ad
+func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
 	return
 }
 
@@ -706,7 +713,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		// 	return
 		// } else {
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
-		user, e := gormUser.GetByUsername(lowerInput)
+		user, e := gormUser.GetByTelegramId(lowerInput)
 		if e != nil && errors.Is(e, gorm.ErrRecordNotFound) {
 			user, _ = gormUser.Add(models.Users{TelegramId: lowerInput, Role: "admin"})
 			err = c.Send("نقش کاربر مورد نظر به ادمین تغییر یافت", superAdminMenu)

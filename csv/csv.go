@@ -22,9 +22,9 @@ func ExportCsv(telID string, db *gorm.DB) (string, error) {
 		return "", err
 	}
 
-	fileName := fmt.Sprintf("%s.csv", uuid.New()) // Unique file name
+	fileName := fmt.Sprintf("./telegram/%s.csv", uuid.New()) // Unique file name
 	// Create a CSV file
-	f, err := os.Create("telegram/" + fileName)
+	f, err := os.Create(fileName)
 
 	if err != nil {
 		log.Println("Couldn't create csv file: ", err)
