@@ -12,7 +12,7 @@ import (
 
 func SendEmail(emaill string, filename string) error {
 
-	err := godotenv.Load("../.env")
+	err := godotenv.Load("./.env")
 	if err != nil {
 		log.Println("Couldn't load environment variables: ", err)
 		return err
