@@ -3,37 +3,40 @@ package models
 import (
     "errors"
     "strings"
+    "time"
+    "gorm.io/gorm"
 )
 
-type Filter struct {
-    FilterID           uint   `json:"filter_id" gorm:"primaryKey"`
-    NumberOfRequests   uint   `json:"number_of_requests"`
-    StartPrice         uint   `json:"start_price"`
-    EndPrice           uint   `json:"end_price"`
-    City               string `json:"city"`
-    Neighborhood       string `json:"neighborhood"`
-    StartArea          uint   `json:"start_area"`
-    EndArea            uint   `json:"end_area"`
-    StartNumberOfRooms uint   `json:"start_number_of_rooms"`
-    EndNumberOfRooms   uint   `json:"end_number_of_rooms"`
-    CategoryPMR        uint   `json:"category_pmr"`
-    StartAge           uint   `json:"start_age"`
-    EndAge             uint   `json:"end_age"`
-    CategoryAV         uint   `json:"category_av"`
-    StartFloorNumber   int    `json:"start_floor_number"`
-    EndFloorNumber     int    `json:"end_floor_number"`
-    Anbary             bool   `json:"anbary"`
-    Elevator           bool   `json:"elevator"`
-    StartDate          string `json:"start_date"`
-    EndDate            string `json:"end_date"`
+type Filters struct {
+    gorm.Model
+    ID                 uint     `gorm:"primaryKey;autoIncrement"`
+    NumberOfRequests   uint
+    StartPrice         uint
+    EndPrice           uint
+    City               string
+    Neighborhood       string
+    StartArea          uint
+    EndArea            uint
+    StartNumberOfRooms uint
+    EndNumberOfRooms   uint
+    CategoryPMR        uint
+    StartAge           uint
+    EndAge             uint
+    CategoryAV         uint
+    StartFloorNumber   int
+    EndFloorNumber     int
+    Anbary             bool
+    Elevator           bool
+    StartDate          time.Time
+    EndDate            time.Time
 }
 
-func (f *Filter) Normalize() {
+func (f *Filters) Normalize() {
     f.City = strings.ToLower(f.City)
     f.Neighborhood = strings.ToLower(f.Neighborhood)
 }
 
-func (f *Filter) Validate() error {
+func (f *Filters) Validate() error {
     if f.StartPrice > f.EndPrice {
         return errors.New("start_price cannot be greater than end_price")
     }
