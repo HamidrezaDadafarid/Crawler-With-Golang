@@ -425,6 +425,9 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 
 // TODO Hirad: handle bookmark ad
 func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "adding_bookmark"
+	err = c.Send("لطفا آیدی آگهی مورد علاقه را وارد کنید")
 	return
 }
 
@@ -680,18 +683,46 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		session.Email = input
 
-		filename, err := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
 
-		if err != nil {
-			t.Loggers.ErrorLogger.Println("exporting csv failed: ", err)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("exporting csv failed: ", e)
+			return
 		}
 
-		err = email.SendEmail(session.Email, filename)
-		if err != nil {
-			t.Loggers.ErrorLogger.Println("sending email failed: ", err)
+		e = email.SendEmail(session.Email, filename)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("sending email failed: ", e)
+			return
 		}
+
+		session.State = ""
 		err = c.Send("ایمیل شما ثبت شد", userMenu)
 		t.Loggers.InfoLogger.Println("user's email set")
+
+	case "adding_bookmark":
+		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		adId, e := strconv.Atoi(input)
+		if e != nil {
+			err = c.Send("آیدی آگهی نامعتبر است دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("Invalid Ad ID")
+			return
+		}
+		e = userAd.Update(models.Users_Ads{
+			UserId:     uint(session.ChatID),
+			AdId:       uint(adId),
+			IsBookmark: true,
+		})
+
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("adding bookmark failed: ", e)
+			err = c.Send("خطایی در افزودن آگهی به علاقه مندی ها رخ داد. مجددا امتحان کنید")
+			return
+		}
+
+		session.State = ""
+		err = c.Send("آگهی به لیست علاقه مندی ها اضافه شد")
+		return
 
 	case "adding_admin":
 		// userNamePattern := `^[a-zA-Z_][a-zA-Z0-9_]{4,31}$`
