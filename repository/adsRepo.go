@@ -52,3 +52,28 @@ func (g *gormAd) Update(ad models.Ads) error {
 }
 
 var _ Ad = (*gormAd)(nil)
+
+
+func AddAd(db *gorm.DB, ad *models.Ads) error {
+    return db.Create(ad).Error
+}
+
+func DeleteAd(db *gorm.DB, adID uint) error {
+    return db.Delete(&models.Ads{}, adID).Error
+}
+
+func EditAd(db *gorm.DB, ad *models.Ads) error {
+    return db.Save(ad).Error
+}
+
+func GetAds(db *gorm.DB, adID uint) ([]models.Ads, error) {
+    var ads []models.Ads
+    var result *gorm.DB
+    if adID != 0 {
+        result = db.Where("id = ?", adID).Find(&ads)
+    } else {
+        result = db.Find(&ads)
+    }
+    return ads, result.Error
+}
+
