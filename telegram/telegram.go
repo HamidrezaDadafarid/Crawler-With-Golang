@@ -106,6 +106,21 @@ func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
 	return telegram, nil
 }
 
+type TelegramRciver struct {
+	Id string
+}
+
+func (reciver *TelegramRciver) Recipient() string {
+	return reciver.Id
+}
+
+func (t *Telegram) SendMessageToUser(idReciver string, message interface{}) error {
+	_, err := t.Bot.Send(&TelegramRciver{
+		Id: idReciver,
+	}, message)
+	return err
+}
+
 func (t *Telegram) registerHandlers() {
 	t.Bot.Handle("/start", t.handleStart)
 	t.Bot.Handle(telebot.OnText, t.handleText)
@@ -359,9 +374,12 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	return
 }
 
-// TODO
-func (t *Telegram) handleShareBookmarks(c telebot.Context) error {
-	return nil
+// TODO: Hirad
+func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "sharing_bookmarks"
+	err = c.Send("لطفا آیدی کاربر مورد نظر را وارد کنید")
+	return
 }
 
 // TODO
@@ -722,6 +740,39 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 		session.State = ""
 		err = c.Send("آگهی به لیست علاقه مندی ها اضافه شد")
+		return
+
+	case "sharing_bookmarks":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			t.Loggers.InfoLogger.Println("Invalid user ID!")
+			err = c.Send("آیدی کاربر نامعتبر است! مجددا امتحان کنید")
+			return
+		}
+
+		userID := input
+
+		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		ads, e := userAd.GetByUserId([]uint{uint(session.ChatID)})
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting user's ads failed: ", e)
+			return
+		}
+		links := ""
+		for _, ad := range ads {
+			if ad.IsBookmark {
+				links += fmt.Sprintf("%s\n", ad.Ad.Link)
+			}
+		}
+		e = t.SendMessageToUser(userID, links)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("sharing bookmarks failed: ", e)
+			c.Send("آیدی کاربر نامعتبر است! مجددا تلاش کنید")
+			return
+		}
+
+		session.State = ""
+		err = c.Send("آگهی ها به کاربر ارسال شد")
 		return
 
 	case "adding_admin":
