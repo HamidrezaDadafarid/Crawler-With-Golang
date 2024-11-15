@@ -1,14 +1,14 @@
 package utils
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"main/models"
-	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func ParseRanges(input string) (uint, uint, error) {
@@ -51,29 +51,13 @@ func ParseDateRanges(input string) (time.Time, time.Time, error) {
 	return minDate, maxDate, nil
 }
 
-func CheckUsernameExists(botToken, username string) (bool, error) {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/getChat?chat_id=@%s", botToken, username)
+func GetEnvVariable(key string) (string, error) {
 
-	resp, err := http.Get(apiURL)
+	err := godotenv.Load("./.env")
+
 	if err != nil {
-		return false, fmt.Errorf("error making request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return false, fmt.Errorf("error reading response: %v", err)
+		return "", errors.New("error loading .env file")
 	}
 
-	var tgResp models.TelegramResponse
-	if err := json.Unmarshal(body, &tgResp); err != nil {
-		return false, fmt.Errorf("error parsing JSON: %v", err)
-	}
-
-	if tgResp.Ok {
-		return true, nil
-	}
-
-	return false, nil
+	return os.Getenv(key), nil
 }

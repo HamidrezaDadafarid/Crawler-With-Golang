@@ -8,6 +8,7 @@ import (
 	"main/database"
 	"main/email"
 	logg "main/log"
+	"main/middlewares"
 	"main/models"
 	"main/repository"
 	"main/utils"
@@ -120,6 +121,7 @@ func (t *Telegram) Start() {
 func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	welcomeMsg := "به ربات خزنده خوش اومدین :)"
 
+	session := models.GetUserSession(c.Chat().ID)
 	telegram_ID := c.Sender().ID
 	gormUser := repository.NewGormUser(database.GetInstnace().Db)
 	user, e := gormUser.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
@@ -150,17 +152,22 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 		err = c.Send(welcomeMsg, adminMenu)
 
 	} else if user.Role == "super_admin" {
-		superAdminMenu.Reply(
-			superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
-			superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
-		)
+		if !session.IsAuthenticated {
+			err = c.Send("لطقا رمز خود را وارد کنید")
+			session.State = "awaiting_password"
+		} else {
+			superAdminMenu.Reply(
+				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
+				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+			)
 
-		t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
-		t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
-		t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
-		t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
+			t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
+			t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
+			t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
 
-		err = c.Send(welcomeMsg, superAdminMenu)
+			err = c.Send(welcomeMsg, superAdminMenu)
+		}
 	}
 	return
 }
@@ -434,7 +441,7 @@ func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) (err error) {
 	return nil
 }
 
-// superAdmin menu handlers
+// superAdminMenu handlers
 func (t *Telegram) handleAddAdmin(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	session.State = "adding_admin"
@@ -442,19 +449,25 @@ func (t *Telegram) handleAddAdmin(c telebot.Context) (err error) {
 	return
 }
 
-// TODO
 func (t *Telegram) handleManageAdmins(c telebot.Context) (err error) {
-	return nil
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "managing_admin"
+	err = c.Send("لطفا آیدی تلگرام ادمین مورد نظر را وارد کنید")
+	return
 }
 
-// TODO
 func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) (err error) {
-	return nil
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "setting_crawl_time_limit"
+	err = c.Send("لطفا یک عدد به دقیقه برای تنظیم محدودیت زمانی فرایند جستجو کرالر وارد کنید")
+	return
 }
 
-// TODO
 func (t *Telegram) handleSetNumberOfAds(c telebot.Context) (err error) {
-	return nil
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "setting_max_searched_items"
+	err = c.Send("لطفا حداکثر تعداد آیتم های جستجو شده در هر کرال را وارد کنید")
+	return
 }
 
 func (t *Telegram) handleText(c telebot.Context) (err error) {
@@ -463,6 +476,30 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 	lowerInput := strings.ToLower(strings.TrimSpace(input))
 
 	switch session.State {
+	case "awaiting_password":
+		e, _ := middlewares.Authentication(input)
+		if e != nil {
+			err = c.Send("رمز ورود اشتباه است دوباره امتحان کنید")
+			t.Loggers.ErrorLogger.Println("error in authenticating super admin")
+			return
+		} else {
+			session.IsAuthenticated = true
+			session.State = ""
+			t.Loggers.InfoLogger.Println("super admin logged in successfully")
+
+			superAdminMenu.Reply(
+				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
+				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+			)
+
+			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
+			t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
+			t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
+			t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+
+			err = c.Send("به ربات خزنده خوش آمدید :)", superAdminMenu)
+		}
+
 	case "setting_city":
 		if session.Filters.City == nil {
 			session.Filters.City = new(string)
@@ -680,37 +717,21 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		session.Email = input
 
-		filename, err := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
 
-		if err != nil {
-			t.Loggers.ErrorLogger.Println("exporting csv failed: ", err)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("exporting csv failed")
 		}
 
 		err = email.SendEmail(session.Email, filename)
 		if err != nil {
-			t.Loggers.ErrorLogger.Println("sending email failed: ", err)
+			t.Loggers.ErrorLogger.Println("sending email failed")
 		}
 		err = c.Send("ایمیل شما ثبت شد", userMenu)
 		t.Loggers.InfoLogger.Println("user's email set")
+		return
 
 	case "adding_admin":
-		// userNamePattern := `^[a-zA-Z_][a-zA-Z0-9_]{4,31}$`
-		// re := regexp.MustCompile(userNamePattern)
-		// if !re.MatchString(lowerInput) {
-		// 	err = c.Send("یوزرنیم نامعتبر است دوباره امتحان کنید")
-		// 	t.Loggers.InfoLogger.Println("invalid username input")
-		// 	return
-		// }
-		// exists, e := utils.CheckUsernameExists(t.Bot.Token, lowerInput)
-		// if e != nil {
-		// 	err = e
-		// 	t.Loggers.ErrorLogger.Println(e.Error())
-		// 	return
-		// } else if !exists {
-		// 	err = c.Send("کاربری با آیدی مورد نظر موجود نمی باشد لطفا دوباره امتحان کنید")
-		// 	t.Loggers.InfoLogger.Println("user does not exists with this username input")
-		// 	return
-		// } else {
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
 		user, e := gormUser.GetByTelegramId(lowerInput)
 		if e != nil && errors.Is(e, gorm.ErrRecordNotFound) {
@@ -731,7 +752,62 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		t.Loggers.InfoLogger.Println("user's role changed to admin")
 		session.State = ""
 		return
-		// }
+
+	case "managing_admin":
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(lowerInput)
+		if e != nil && errors.Is(e, gorm.ErrRecordNotFound) {
+			err = c.Send("کاربری با آیدی مورد نظر یافت نشد لطفا دوباره تلاش کنید")
+			t.Loggers.InfoLogger.Println("user not found")
+			return
+		}
+		user.Role = "user"
+		e = gormUser.Update(user)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error updating user's role")
+			return
+		}
+		err = c.Send("نقش ادمین مورد نظر به کاربر ساده تغییر یافت", superAdminMenu)
+		t.Loggers.InfoLogger.Println("admin's role changed to user")
+		session.State = ""
+		return
+
+	case "setting_crawl_time_limit":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			err = c.Send("لطفا زمان مورد نظر خود را به دقیقه وارد کنید")
+			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
+			return
+		}
+		e := os.Setenv("TIMEOUT", input)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error in setting crawl time limit")
+			return
+		}
+		err = c.Send("محدودیت زمان فرآیند جستجو آپدیت شد", superAdminMenu)
+		t.Loggers.InfoLogger.Println("crawl time limit updated")
+		session.State = ""
+		return
+
+	case "setting_max_searched_items":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			err = c.Send("لطفا حداکثر تعداد آیتم های جستجو شده در هر کرال را به صورت یک عدد وارد کنید")
+			t.Loggers.InfoLogger.Println("invalid user input for max searched items in each crawl")
+			return
+		}
+		e := os.Setenv("MAX_SEARCHED_ITEMS", input)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error in setting max searched items in each crawlW")
+			return
+		}
+		err = c.Send("تعداد آیتم های جستجو شده آپدیت شد", superAdminMenu)
+		t.Loggers.InfoLogger.Println("crawl max searched items updated")
+		session.State = ""
+		return
 
 	default:
 		err = c.Send("لطفا از منو آیتم مورد نظر خود را را انتخاب کنید")
