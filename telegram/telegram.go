@@ -107,6 +107,21 @@ func NewTelegramBot(config *TelegramConfig) (*Telegram, error) {
 	return telegram, nil
 }
 
+type TelegramRciver struct {
+	Id string
+}
+
+func (reciver *TelegramRciver) Recipient() string {
+	return reciver.Id
+}
+
+func (t *Telegram) SendMessageToUser(idReciver string, message interface{}) error {
+	_, err := t.Bot.Send(&TelegramRciver{
+		Id: idReciver,
+	}, message)
+	return err
+}
+
 func (t *Telegram) registerHandlers() {
 	t.Bot.Handle("/start", t.handleStart)
 	t.Bot.Handle(telebot.OnText, t.handleText)
@@ -366,9 +381,12 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	return
 }
 
-// TODO
-func (t *Telegram) handleShareBookmarks(c telebot.Context) error {
-	return nil
+// TODO: Hirad
+func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "sharing_bookmarks"
+	err = c.Send("لطفا آیدی کاربر مورد نظر را وارد کنید")
+	return
 }
 
 // TODO
@@ -432,6 +450,9 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 
 // TODO Hirad: handle bookmark ad
 func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "adding_bookmark"
+	err = c.Send("لطفا آیدی آگهی مورد علاقه را وارد کنید")
 	return
 }
 
@@ -727,8 +748,67 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		if err != nil {
 			t.Loggers.ErrorLogger.Println("sending email failed")
 		}
+
+		session.State = ""
 		err = c.Send("ایمیل شما ثبت شد", userMenu)
 		t.Loggers.InfoLogger.Println("user's email set")
+		return
+
+	case "adding_bookmark":
+		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		adId, e := strconv.Atoi(input)
+		if e != nil {
+			err = c.Send("آیدی آگهی نامعتبر است دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("Invalid Ad ID")
+			return
+		}
+		e = userAd.Update(models.Users_Ads{
+			UserId:     uint(session.ChatID),
+			AdId:       uint(adId),
+			IsBookmark: true,
+		})
+
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("adding bookmark failed: ", e)
+			err = c.Send("خطایی در افزودن آگهی به علاقه مندی ها رخ داد. مجددا امتحان کنید")
+			return
+		}
+
+		session.State = ""
+		err = c.Send("آگهی به لیست علاقه مندی ها اضافه شد")
+		return
+
+	case "sharing_bookmarks":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			t.Loggers.InfoLogger.Println("Invalid user ID!")
+			err = c.Send("آیدی کاربر نامعتبر است! مجددا امتحان کنید")
+			return
+		}
+
+		userID := input
+
+		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		ads, e := userAd.GetByUserId([]uint{uint(session.ChatID)})
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting user's ads failed: ", e)
+			return
+		}
+		links := ""
+		for _, ad := range ads {
+			if ad.IsBookmark {
+				links += fmt.Sprintf("%s\n", ad.Ad.Link)
+			}
+		}
+		e = t.SendMessageToUser(userID, links)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("sharing bookmarks failed: ", e)
+			c.Send("آیدی کاربر نامعتبر است! مجددا تلاش کنید")
+			return
+		}
+
+		session.State = ""
+		err = c.Send("آگهی ها به کاربر ارسال شد")
 		return
 
 	case "adding_admin":
