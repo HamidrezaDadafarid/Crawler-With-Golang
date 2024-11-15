@@ -110,10 +110,11 @@ func (reciver *TelegramRciver) Recipient() string {
 	return reciver.Id
 }
 
-func (t *Telegram) SendMessageToUser(idReciver string, message interface{}) {
-	t.Bot.Send(&TelegramRciver{
+func (t *Telegram) SendMessageToUser(idReciver string, message interface{}) error {
+	_, err := t.Bot.Send(&TelegramRciver{
 		Id: idReciver,
 	}, message)
+	return err
 }
 
 func (t *Telegram) registerHandlers() {
