@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/telebot.v4"
@@ -28,6 +29,7 @@ type TelegramConfig struct {
 
 type Telegram struct {
 	Bot     *telebot.Bot
+	Mutex   sync.Mutex
 	Config  *TelegramConfig
 	Loggers logg.TelegramLogger
 }
@@ -38,8 +40,11 @@ var (
 	btnManageAdmins      = superAdminMenu.Text("مدیریت کردن ادمین ها")
 	btnSetNumberOfAds    = superAdminMenu.Text("تنظیم تعداد آیتم های جستجو شده")
 	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
-	adminMenu            = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnSeeCrawlDetails   = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
+	// اطلاعاتت تمامی کاربران به همراه اطلاعات کرال های انجام شده هر کاربر
+	// CRUD --> Ehsan
+
+	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnSeeCrawlDetails = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
 
 	userMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnBookmarkAd     = userMenu.Text("اضافه کردن آگهی به لیست علاقه مندی ها")
@@ -47,7 +52,7 @@ var (
 	btnShareBookmarks = userMenu.Text("اشتراک گذاری آگهی های مورد علاقه")
 	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
 	btnDeleteHistory  = userMenu.Text("پاک کردن تاریخچه")
-	// تنظیم بازه زمانی
+	// watchList --> Hirad
 
 	filterMenu        = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnPrice          = filterMenu.Text("قیمت")
@@ -190,6 +195,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 // -userMenu handlers
 func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
+	session.Filters = models.Filters{}
 	session.State = "selecting_filter"
 
 	filterMenu.Reply(
@@ -363,7 +369,16 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		gormFilter := repository.NewGormFilter(database.GetInstnace().Db)
 
 		gormFilter.Add(session.Filters)
-		return c.Send("فیلتر شما با موفقیت ثبت شد", userMenu)
+		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", session.Filters.ID), userMenu)
+
+		// gormAd := repository.NewGormAd(database.GetInstnace().Db)
+		// ads, e := gormAd.Get(session.Filters)
+		// if e != nil {
+		// 	for _, ad := range ads {
+
+		// 		c.Send()
+		// 	}
+		// }
 	})
 
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
@@ -381,7 +396,6 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	return
 }
 
-// TODO: Hirad
 func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	session.State = "sharing_bookmarks"
@@ -448,7 +462,6 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 	return
 }
 
-// TODO Hirad: handle bookmark ad
 func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	session.State = "adding_bookmark"
