@@ -10,7 +10,7 @@ type WatchList struct {
 	gorm.Model
 	UserID   uint `gorm:"primaryKey;autoIncrement:false"`
 	FilterId uint `gorm:"primaryKey;autoIncrement:false"`
-	Time     time.Time
+	Time     time.Duration
 	Filter   Filters `gorm:"foreignKey:FilterId"`
 	User     Users   `gorm:"foreignKey:UserID"`
 }

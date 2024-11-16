@@ -52,7 +52,14 @@ var (
 	btnShareBookmarks = userMenu.Text("اشتراک گذاری آگهی های مورد علاقه")
 	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
 	btnDeleteHistory  = userMenu.Text("پاک کردن تاریخچه")
+	btnAddWatchList   = userMenu.Text("تنظیم کردن watch-list")
 	// watchList --> Hirad
+
+	watchListMenu = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnFilterID   = watchListMenu.Text("آیدی فیلتر مورد نظر")
+	btnTime       = watchListMenu.Text("بازه زمانی بروزرسانی")
+	btnSubmitWL   = watchListMenu.Text("ثبت watchlist")
+	btnBackWL     = watchListMenu.Text("بازگشت")
 
 	filterMenu        = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnPrice          = filterMenu.Text("قیمت")
@@ -151,7 +158,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	if user.Role == "user" {
 		userMenu.Reply(
 			userMenu.Row(btnSetFilters, btnShareBookmarks, btnBookmarkAd),
-			userMenu.Row(btnGetOutputFile, btnDeleteHistory),
+			userMenu.Row(btnGetOutputFile, btnDeleteHistory, btnAddWatchList),
 		)
 
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
@@ -159,6 +166,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
 		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
 		t.Bot.Handle(&btnBookmarkAd, t.handleBookmarkAd)
+		t.Bot.Handle(&btnAddWatchList, t.handleAddWatchList)
 
 		err = c.Send(welcomeMsg, userMenu)
 
@@ -189,6 +197,67 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 			err = c.Send(welcomeMsg, superAdminMenu)
 		}
 	}
+	return
+}
+
+func (t *Telegram) handleAddWatchList(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.WatchList = models.WatchList{}
+	session.State = "adding_watchlist"
+
+	watchListMenu.Reply(
+		watchListMenu.Row(btnFilterID, btnTime),
+		watchListMenu.Row(btnSubmitWL, btnBackWL),
+	)
+
+	t.Bot.Handle(&btnFilterID, func(ctx telebot.Context) (err error) {
+		if filterID := session.WatchList.FilterId; filterID != 0 {
+			err = c.Send("آیدی فیلتر قبلا مشخص شده", watchListMenu)
+			return
+		}
+		session.State = "watchlist_filterID"
+		err = c.Send("لطفا آیدی فیلتر مورد نظر را وارد کنید")
+		return
+	})
+
+	t.Bot.Handle(&btnTime, func(ctx telebot.Context) (err error) {
+		if wlTime := session.WatchList.Time; wlTime != (time.Minute * 0) {
+			err = c.Send("بازه زمانی قبلا مشخص شده است", watchListMenu)
+			return
+
+		}
+		session.State = "watchlist_time"
+		err = c.Send(" لطفا بازه زمانی بروزرسانی را برحسب دقیقه وارد کنید (e.g: 10)")
+		return
+	})
+
+	t.Bot.Handle(&btnSubmitWL, func(ctx telebot.Context) (err error) {
+		session := models.GetUserSession(c.Chat().ID)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		gormWL := repository.NewWatchList(database.GetInstnace().Db)
+
+		user, _ := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		session.WatchList.UserID = user.ID
+
+		gormWL.Add(session.WatchList)
+
+		return c.Send("شما با موفقیت ثبت شد  watch-list", userMenu)
+	})
+
+	t.Bot.Handle(&btnBackWL, func(c telebot.Context) (err error) {
+		session.State = ""
+		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
+		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnBookmarkAd, t.handleBookmarkAd)
+		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
+		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+		t.Bot.Handle(&btnAddWatchList, t.handleAddWatchList)
+
+		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
+		return
+	})
+
+	err = c.Send("لطفا یک گزینه را انتخاب کنید ")
 	return
 }
 
@@ -385,8 +454,10 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
 		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnBookmarkAd, t.handleBookmarkAd)
 		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
 		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+		t.Bot.Handle(&btnAddWatchList, t.handleAddWatchList)
 
 		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 		return
@@ -426,8 +497,10 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 		session.State = ""
 		t.Bot.Handle(&btnSetFilters, t.handleSetFilters)
 		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
+		t.Bot.Handle(&btnBookmarkAd, t.handleBookmarkAd)
 		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
 		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+		t.Bot.Handle(&btnAddWatchList, t.handleAddWatchList)
 
 		err = c.Send("به صفحه اصلی بازگشتید", userMenu)
 		return
@@ -533,6 +606,30 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 			err = c.Send("به ربات خزنده خوش آمدید :)", superAdminMenu)
 		}
+
+	case "watchlist_filterID":
+		filterID, e := strconv.Atoi(input)
+		if e != nil {
+			c.Send("آیدی وارد شده نامعتبر است")
+			t.Loggers.InfoLogger.Println("Invalid filterID")
+			return
+		}
+		session.WatchList.FilterId = uint(filterID)
+		session.State = ""
+		err = c.Send("آیدی مورد نظر ثبت شد", watchListMenu)
+		t.Loggers.InfoLogger.Println("Set watchlist filterID")
+
+	case "watchlist_time":
+		wlTime, e := strconv.Atoi(input)
+		if e != nil {
+			c.Send("زمان وارد شده نامعتبر است")
+			t.Loggers.InfoLogger.Println("Invalid time duration")
+			return
+		}
+		session.WatchList.Time = (time.Minute * time.Duration(wlTime))
+		session.State = ""
+		err = c.Send("بازه زمانی مورد نظر ثبت شد", watchListMenu)
+		t.Loggers.InfoLogger.Println("Set time duration for watch-list")
 
 	case "setting_city":
 		if session.Filters.City == nil {
