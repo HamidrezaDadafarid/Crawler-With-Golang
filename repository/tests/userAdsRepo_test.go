@@ -16,10 +16,8 @@ func TestUserAdsRepo(t *testing.T) {
 	userAdsRepo := repository.NewGormUser_Ad(dbManager.Db)
 
 	addedUser, err := userRepo.Add(models.Users{
-		TelegramId:       "telegram id",
-		Role:             "User",
-		MaxSearchedItems: 10,
-		TimeLimit:        100,
+		TelegramId: "telegram id",
+		Role:       "User",
 	})
 	if err != nil {
 		t.Error("failed to add user")

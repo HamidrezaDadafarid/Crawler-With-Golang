@@ -1,10 +1,14 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func ParseRanges(input string) (uint, uint, error) {
@@ -45,4 +49,15 @@ func ParseDateRanges(input string) (time.Time, time.Time, error) {
 	}
 
 	return minDate, maxDate, nil
+}
+
+func GetEnvVariable(key string) (string, error) {
+
+	err := godotenv.Load("./.env")
+
+	if err != nil {
+		return "", errors.New("error loading .env file")
+	}
+
+	return os.Getenv(key), nil
 }

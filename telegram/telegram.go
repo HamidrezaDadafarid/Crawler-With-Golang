@@ -1,10 +1,14 @@
 package telegram
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"main/csv"
 	"main/database"
+	"main/email"
 	logg "main/log"
+	"main/middlewares"
 	"main/models"
 	"main/repository"
 	"main/utils"
@@ -12,9 +16,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/telebot.v4"
+	"gorm.io/gorm"
 )
 
 type TelegramConfig struct {
@@ -23,6 +29,7 @@ type TelegramConfig struct {
 
 type Telegram struct {
 	Bot     *telebot.Bot
+	Mutex   sync.Mutex
 	Config  *TelegramConfig
 	Loggers logg.TelegramLogger
 }
@@ -33,16 +40,19 @@ var (
 	btnManageAdmins      = superAdminMenu.Text("مدیریت کردن ادمین ها")
 	btnSetNumberOfAds    = superAdminMenu.Text("تنظیم تعداد آیتم های جستجو شده")
 	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
+	// اطلاعاتت تمامی کاربران به همراه اطلاعات کرال های انجام شده هر کاربر
+	// CRUD --> Ehsan
 
 	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
-	btnSeeCrawlDetails = superAdminMenu.Text("See Crawl Details")
+	btnSeeCrawlDetails = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
 
 	userMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
+	btnBookmarkAd     = userMenu.Text("اضافه کردن آگهی به لیست علاقه مندی ها")
 	btnSetFilters     = userMenu.Text("ثبت فیلتر")
 	btnShareBookmarks = userMenu.Text("اشتراک گذاری آگهی های مورد علاقه")
 	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
 	btnDeleteHistory  = userMenu.Text("پاک کردن تاریخچه")
-	// تنظیم بازه زمانی
+	// watchList --> Hirad
 
 	filterMenu        = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnPrice          = filterMenu.Text("قیمت")
@@ -131,17 +141,16 @@ func (t *Telegram) Start() {
 func (t *Telegram) handleStart(c telebot.Context) (err error) {
 	welcomeMsg := "به ربات خزنده خوش اومدین :)"
 
-	var user models.Users
-	// user.Role = "user"
+	session := models.GetUserSession(c.Chat().ID)
 	telegram_ID := c.Sender().ID
 	gormUser := repository.NewGormUser(database.GetInstnace().Db)
-	user, _ = gormUser.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
-	if user.Role == "" {
+	user, e := gormUser.GetByTelegramId(strconv.Itoa(int(telegram_ID)))
+	if e != nil && errors.Is(e, gorm.ErrRecordNotFound) {
 		user, _ = gormUser.Add(models.Users{TelegramId: strconv.Itoa(int(telegram_ID)), Role: "user"})
 	}
 	if user.Role == "user" {
 		userMenu.Reply(
-			userMenu.Row(btnSetFilters, btnShareBookmarks),
+			userMenu.Row(btnSetFilters, btnShareBookmarks, btnBookmarkAd),
 			userMenu.Row(btnGetOutputFile, btnDeleteHistory),
 		)
 
@@ -149,6 +158,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 		t.Bot.Handle(&btnShareBookmarks, t.handleShareBookmarks)
 		t.Bot.Handle(&btnGetOutputFile, t.handleGetOutput)
 		t.Bot.Handle(&btnDeleteHistory, t.handleDeleteHistory)
+		t.Bot.Handle(&btnBookmarkAd, t.handleBookmarkAd)
 
 		err = c.Send(welcomeMsg, userMenu)
 
@@ -161,18 +171,23 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 
 		err = c.Send(welcomeMsg, adminMenu)
 
-	} else {
-		superAdminMenu.Reply(
-			superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
-			superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
-		)
+	} else if user.Role == "super_admin" {
+		if !session.IsAuthenticated {
+			err = c.Send("لطقا رمز خود را وارد کنید")
+			session.State = "awaiting_password"
+		} else {
+			superAdminMenu.Reply(
+				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
+				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+			)
 
-		t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
-		t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
-		t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
-		t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
+			t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
+			t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
+			t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
 
-		err = c.Send(welcomeMsg, superAdminMenu)
+			err = c.Send(welcomeMsg, superAdminMenu)
+		}
 	}
 	return
 }
@@ -180,6 +195,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 // -userMenu handlers
 func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
+	session.Filters = models.Filters{}
 	session.State = "selecting_filter"
 
 	filterMenu.Reply(
@@ -353,7 +369,16 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 		gormFilter := repository.NewGormFilter(database.GetInstnace().Db)
 
 		gormFilter.Add(session.Filters)
-		return c.Send("فیلتر شما با موفقیت ثبت شد", userMenu)
+		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", session.Filters.ID), userMenu)
+
+		// gormAd := repository.NewGormAd(database.GetInstnace().Db)
+		// ads, e := gormAd.Get(session.Filters)
+		// if e != nil {
+		// 	for _, ad := range ads {
+
+		// 		c.Send()
+		// 	}
+		// }
 	})
 
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
@@ -371,9 +396,11 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	return
 }
 
-// TODO
-func (t *Telegram) handleShareBookmarks(c telebot.Context) error {
-	return nil
+func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "sharing_bookmarks"
+	err = c.Send("لطفا آیدی کاربر مورد نظر را وارد کنید")
+	return
 }
 
 // TODO
@@ -435,38 +462,78 @@ func (t *Telegram) handleDeleteHistory(c telebot.Context) (err error) {
 	return
 }
 
+func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "adding_bookmark"
+	err = c.Send("لطفا آیدی آگهی مورد علاقه را وارد کنید")
+	return
+}
+
 // -adminMenu handlers
 // TODO
-func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) error {
+func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) (err error) {
 	return nil
 }
 
-// Super admin menu handlers
-// TODO
-func (t *Telegram) handleAddAdmin(c telebot.Context) error {
-	return nil
+// superAdminMenu handlers
+func (t *Telegram) handleAddAdmin(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "adding_admin"
+	err = c.Send("لطفا آیدی تلگرام کاربر مورد نظر خود را وارد کنید")
+	return
 }
 
-// TODO
-func (t *Telegram) handleManageAdmins(c telebot.Context) error {
-	return nil
+func (t *Telegram) handleManageAdmins(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "managing_admin"
+	err = c.Send("لطفا آیدی تلگرام ادمین مورد نظر را وارد کنید")
+	return
 }
 
-// TODO
-func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) error {
-	return nil
+func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "setting_crawl_time_limit"
+	err = c.Send("لطفا یک عدد به دقیقه برای تنظیم محدودیت زمانی فرایند جستجو کرالر وارد کنید")
+	return
 }
 
-// TODO
-func (t *Telegram) handleSetNumberOfAds(c telebot.Context) error {
-	return nil
+func (t *Telegram) handleSetNumberOfAds(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "setting_max_searched_items"
+	err = c.Send("لطفا حداکثر تعداد آیتم های جستجو شده در هر کرال را وارد کنید")
+	return
 }
 
 func (t *Telegram) handleText(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	input := c.Text()
+	lowerInput := strings.ToLower(strings.TrimSpace(input))
 
 	switch session.State {
+	case "awaiting_password":
+		e, _ := middlewares.Authentication(input)
+		if e != nil {
+			err = c.Send("رمز ورود اشتباه است دوباره امتحان کنید")
+			t.Loggers.ErrorLogger.Println("error in authenticating super admin")
+			return
+		} else {
+			session.IsAuthenticated = true
+			session.State = ""
+			t.Loggers.InfoLogger.Println("super admin logged in successfully")
+
+			superAdminMenu.Reply(
+				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
+				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+			)
+
+			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
+			t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
+			t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
+			t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+
+			err = c.Send("به ربات خزنده خوش آمدید :)", superAdminMenu)
+		}
+
 	case "setting_city":
 		if session.Filters.City == nil {
 			session.Filters.City = new(string)
@@ -575,7 +642,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 	case "setting_storage":
 		if input != "بله" && input != "خیر" {
 			err = c.Send("دسته بندی نامعتبر است. دوباره امتحان کنید")
-			t.Loggers.ErrorLogger.Println("invalid input for storage exsistence")
+			t.Loggers.InfoLogger.Println("invalid input for storage exsistence")
 			return
 		}
 
@@ -677,15 +744,163 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 	case "setting_user_email":
 		emailRegex := regexp.MustCompile(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`)
 		if !emailRegex.Match([]byte(input)) {
-			err = c.Send("ایمیل نا معتبر است دوباره امتحان کنید")
-			t.Loggers.ErrorLogger.Println("invalid email input")
+			err = c.Send("ایمیل نامعتبر است دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("invalid email input")
+			return
+		}
+		session.State = ""
+		session.Email = input
+
+		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("exporting csv failed")
+		}
+
+		err = email.SendEmail(session.Email, filename)
+		if err != nil {
+			t.Loggers.ErrorLogger.Println("sending email failed")
+		}
+
+		session.State = ""
+		err = c.Send("ایمیل شما ثبت شد", userMenu)
+		t.Loggers.InfoLogger.Println("user's email set")
+		return
+
+	case "adding_bookmark":
+		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		adId, e := strconv.Atoi(input)
+		if e != nil {
+			err = c.Send("آیدی آگهی نامعتبر است دوباره امتحان کنید")
+			t.Loggers.InfoLogger.Println("Invalid Ad ID")
+			return
+		}
+		e = userAd.Update(models.Users_Ads{
+			UserId:     uint(session.ChatID),
+			AdId:       uint(adId),
+			IsBookmark: true,
+		})
+
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("adding bookmark failed: ", e)
+			err = c.Send("خطایی در افزودن آگهی به علاقه مندی ها رخ داد. مجددا امتحان کنید")
 			return
 		}
 
 		session.State = ""
-		session.Email = input
-		err = c.Send("ایمیل شما ثبت شد", userMenu)
-		t.Loggers.InfoLogger.Println("user's email set")
+		err = c.Send("آگهی به لیست علاقه مندی ها اضافه شد")
+		return
+
+	case "sharing_bookmarks":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			t.Loggers.InfoLogger.Println("Invalid user ID!")
+			err = c.Send("آیدی کاربر نامعتبر است! مجددا امتحان کنید")
+			return
+		}
+
+		userID := input
+
+		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		ads, e := userAd.GetByUserId([]uint{uint(session.ChatID)})
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting user's ads failed: ", e)
+			return
+		}
+		links := ""
+		for _, ad := range ads {
+			if ad.IsBookmark {
+				links += fmt.Sprintf("%s\n", ad.Ad.Link)
+			}
+		}
+		e = t.SendMessageToUser(userID, links)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("sharing bookmarks failed: ", e)
+			c.Send("آیدی کاربر نامعتبر است! مجددا تلاش کنید")
+			return
+		}
+
+		session.State = ""
+		err = c.Send("آگهی ها به کاربر ارسال شد")
+		return
+
+	case "adding_admin":
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(lowerInput)
+		if e != nil && errors.Is(e, gorm.ErrRecordNotFound) {
+			user, _ = gormUser.Add(models.Users{TelegramId: lowerInput, Role: "admin"})
+			err = c.Send("نقش کاربر مورد نظر به ادمین تغییر یافت", superAdminMenu)
+			t.Loggers.InfoLogger.Println("user's role changed to admin")
+			session.State = ""
+			return
+		}
+		user.Role = "admin"
+		e = gormUser.Update(user)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error updating user's role")
+			return
+		}
+		err = c.Send("نقش کاربر مورد نظر به ادمین تغییر یافت", superAdminMenu)
+		t.Loggers.InfoLogger.Println("user's role changed to admin")
+		session.State = ""
+		return
+
+	case "managing_admin":
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(lowerInput)
+		if e != nil && errors.Is(e, gorm.ErrRecordNotFound) {
+			err = c.Send("کاربری با آیدی مورد نظر یافت نشد لطفا دوباره تلاش کنید")
+			t.Loggers.InfoLogger.Println("user not found")
+			return
+		}
+		user.Role = "user"
+		e = gormUser.Update(user)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error updating user's role")
+			return
+		}
+		err = c.Send("نقش ادمین مورد نظر به کاربر ساده تغییر یافت", superAdminMenu)
+		t.Loggers.InfoLogger.Println("admin's role changed to user")
+		session.State = ""
+		return
+
+	case "setting_crawl_time_limit":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			err = c.Send("لطفا زمان مورد نظر خود را به دقیقه وارد کنید")
+			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
+			return
+		}
+		e := os.Setenv("TIMEOUT", input)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error in setting crawl time limit")
+			return
+		}
+		err = c.Send("محدودیت زمان فرآیند جستجو آپدیت شد", superAdminMenu)
+		t.Loggers.InfoLogger.Println("crawl time limit updated")
+		session.State = ""
+		return
+
+	case "setting_max_searched_items":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			err = c.Send("لطفا حداکثر تعداد آیتم های جستجو شده در هر کرال را به صورت یک عدد وارد کنید")
+			t.Loggers.InfoLogger.Println("invalid user input for max searched items in each crawl")
+			return
+		}
+		e := os.Setenv("MAX_SEARCHED_ITEMS", input)
+		if e != nil {
+			err = e
+			t.Loggers.ErrorLogger.Println("error in setting max searched items in each crawlW")
+			return
+		}
+		err = c.Send("تعداد آیتم های جستجو شده آپدیت شد", superAdminMenu)
+		t.Loggers.InfoLogger.Println("crawl max searched items updated")
+		session.State = ""
+		return
 
 	default:
 		err = c.Send("لطفا از منو آیتم مورد نظر خود را را انتخاب کنید")

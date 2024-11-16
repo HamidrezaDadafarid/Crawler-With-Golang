@@ -41,7 +41,7 @@ func (suite *AuthTestSuite) TestValidPassword() {
 	// Test a valid password
 	pass := "test_password"
 
-	result := Authentication(pass)
+	_, result := Authentication(pass)
 
 	suite.True(result, "Expected the password to be valid")
 }
@@ -50,7 +50,7 @@ func (suite *AuthTestSuite) TestInvalidPassword() {
 	// Test with an invalid password
 	pass := "invalid_password"
 
-	result := Authentication(pass)
+	_, result := Authentication(pass)
 
 	suite.False(result, "Expected the password to be invalid")
 }
@@ -62,7 +62,7 @@ func (suite *AuthTestSuite) TestNoPasswordConfigured() {
 	// Test with some password
 	pass := "some_password"
 
-	result := Authentication(pass)
+	_, result := Authentication(pass)
 
 	suite.False(result, "Expected the authentication to fail due to no configured password")
 }
