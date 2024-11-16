@@ -24,16 +24,24 @@ type CrawlerAbstract struct {
 	Crawler   Crawler
 }
 
-func (c *CrawlerAbstract) Start() {
+func (c *CrawlerAbstract) Start(t time.Duration) {
 	defer c.Collector.Close()
 	Ads := c.Crawler.GetTargets(c.Page, c.Collector)
 
-	for i := 0; i < len(Ads); i++ {
-		c.Wg.Add(1)
-		go c.Crawler.GetDetails(Ads[i], c.Collector, c.Wg)
+	timeout := time.NewTimer(t)
 
-		time.Sleep(time.Second * 2)
+	for i := 0; i < len(Ads); i++ {
+
+		select {
+		case <-timeout.C:
+			break
+		case <-time.After(time.Millisecond * 1500):
+			c.Wg.Add(1)
+			go c.Crawler.GetDetails(Ads[i], c.Collector, c.Wg)
+		}
+
 	}
+	c.Wg.Wait()
 	Ads = c.validateItems(Ads)
 	c.sendDataToDB(Ads)
 }

@@ -163,15 +163,15 @@ func getChangabale(collector *rod.Page, elem *rod.Element) (int, int) {
 
 	if strings.Contains(mortPriceText, `میلیون`) {
 
-		mortPrice = changeFarsiToEng(cleanPrices(strings.ReplaceAll(mortPriceText, `میلیون`, ``)))
+		mortPrice = changeFarsiToEng(cleanTexts(strings.ReplaceAll(mortPriceText, `میلیون`, ``)))
 
 	} else {
 
-		mortPrice = changeFarsiToEng(cleanPrices(strings.ReplaceAll(mortPriceText, `میلیارد`, ``)))
+		mortPrice = changeFarsiToEng(cleanTexts(strings.ReplaceAll(mortPriceText, `میلیارد`, ``)))
 	}
 
 	rentPriceText := mortelem.MustNext().MustText()
-	rentPrice = changeFarsiToEng(cleanPrices(strings.ReplaceAll(rentPriceText, `میلیون`, ``)))
+	rentPrice = changeFarsiToEng(cleanTexts(strings.ReplaceAll(rentPriceText, `میلیون`, ``)))
 
 	if rentPrice != -1 {
 		rentPrice *= 1000000
@@ -188,10 +188,10 @@ func getNormal(collector *rod.Page) (int, int) {
 	)
 
 	uncleaned = getNumbersFromSections(`\u0648\u062f\u06cc\u0639\u0647`, collector) // mortgage price
-	mort = changeFarsiToEng(cleanPrices(uncleaned))
+	mort = changeFarsiToEng(cleanTexts(uncleaned))
 
 	uncleaned = getNumbersFromSections(`\u0627\u062c\u0627\u0631\u0647\u0654\u0020\u0645\u0627\u0647\u0627\u0646\u0647`, collector) // rent price
-	rent = changeFarsiToEng(cleanPrices(uncleaned))
+	rent = changeFarsiToEng(cleanTexts(uncleaned))
 
 	return mort, rent
 
@@ -210,7 +210,7 @@ func getRentAndMortgagePrice(collector *rod.Page) (int, int) {
 
 func getSellPrice(collector *rod.Page) int {
 	uncleanedPrice := getNumbersFromSections(`\u0642\u06cc\u0645\u062a\u0020\u06a9\u0644`, collector)
-	return changeFarsiToEng(cleanPrices(uncleanedPrice))
+	return changeFarsiToEng(cleanTexts(uncleanedPrice))
 }
 
 func getFloor(collector *rod.Page) int {

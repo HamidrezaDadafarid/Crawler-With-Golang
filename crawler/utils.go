@@ -29,8 +29,8 @@ type Districts struct {
 	Districts []District `json:"districts"`
 }
 
-func cleanPrices(a string) string {
-	return strings.ReplaceAll(strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(a, `٬`, ``), `تومان`, ``)), `.`, ``)
+func cleanTexts(a string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(a, `٬`, ``), `تومان`, ``)), `.`, ``), `سال`, ``)
 }
 
 func changeFarsiToEng(a string) int {

@@ -38,6 +38,7 @@ func StartCrawler(page int, d bool, s bool) {
 			rod.MustClose()
 			os.Exit(0)
 		}()
+
 		if d {
 			divarCrawler := NewDivarCrawler(page, &waitGroup, rod)
 			divarCrawler.Start()

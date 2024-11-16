@@ -3,6 +3,8 @@ package crawler
 import (
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
 	"sync"
 
 	"github.com/go-rod/rod"
@@ -83,8 +85,65 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 
 	ad.Title = collector.MustElement(`h1.mjNIv`).MustText()
 
-	fmt.Println(ad.Title)
-
 	ad.Description = collector.MustElement(`div.MQJ5W`).MustText()
+
+	a := []string{`انباری`, `آسانسور`, `پارکینگ`, `تعداد اتاق`, `متراژ`, `سن بنا`, `رهن`, `اجاره`}
+
+	for _, key := range a {
+
+		if ok, section, _ := collector.HasR(`div.C7Rh9`, key); ok {
+			switch {
+
+			case key == `انباری` || key == `آسانسور` || key == `پارکینگ`:
+
+				if ok, _, _ := section.HasR(`p._874-x`, `^دارد$`); ok {
+
+					switch key {
+					case `انباری`:
+						ad.Anbary = ok
+					case `آسانسور`:
+						ad.Elevator = ok
+					case `پارکینگ`:
+						ad.Parking = ok
+					}
+
+				}
+
+			default:
+
+				uncleanedText := section.MustElement(`p._874-x`).MustText()
+				cleanedText := changeFarsiToEng(cleanTexts(uncleanedText))
+
+				if cleanedText != -1 {
+
+					switch key {
+					case `متراژ`:
+						ad.Meters = uint(cleanedText)
+					case `تعداد اتاق`:
+						ad.NumberOfRooms = uint(cleanedText)
+					case `سن بنا`:
+						ad.Age = uint(cleanedText)
+					case `رهن`:
+						ad.MortgagePrice = uint(cleanedText)
+					case `اجاره`:
+						ad.RentPrice = uint(cleanedText)
+					}
+
+				}
+			}
+		}
+	}
+
+	patternFloor := regexp.MustCompile(`طبقه ملک: [0-9]+`)
+	patternFloorNum := regexp.MustCompile(`[0-9]+`)
+
+	flooruncleaned := patternFloor.FindString(ad.Description)
+	floorcleaned := patternFloorNum.FindString(flooruncleaned)
+
+	numeric, err := strconv.Atoi(floorcleaned)
+
+	if err == nil {
+		ad.FloorNumber = numeric
+	}
 
 }
