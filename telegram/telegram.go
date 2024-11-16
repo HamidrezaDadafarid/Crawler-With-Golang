@@ -257,7 +257,7 @@ func (t *Telegram) handleAddWatchList(c telebot.Context) (err error) {
 		return
 	})
 
-	err = c.Send("لطفا یک گزینه را انتخاب کنید ")
+	err = c.Send("لطفا یک گزینه را انتخاب کنید ", watchListMenu)
 	return
 }
 
@@ -858,6 +858,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		if err != nil {
 			t.Loggers.ErrorLogger.Println("sending email failed")
 		}
+		os.Remove(filename)
 
 		session.State = ""
 		err = c.Send("ایمیل شما ثبت شد", userMenu)
