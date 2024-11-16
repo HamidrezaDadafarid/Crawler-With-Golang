@@ -2,6 +2,7 @@ package models
 
 type UserSession struct {
 	Filters         Filters
+	WatchList       WatchList
 	Email           string
 	State           string
 	ChatID          int64
