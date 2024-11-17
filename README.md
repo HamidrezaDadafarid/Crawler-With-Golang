@@ -21,7 +21,6 @@ This project is a web crawling system written in Go that collects real estate ad
 - **PostgreSQL**: Database used for storing advertisement and user data.
 - **Redis**: Manages request rate limits and prevents excessive user requests.
 - **GORM**: ORM used for database interactions with PostgreSQL.
-- **Gin**: Web framework in Golang for building the API.
 - **go-redis**: Library used for connecting to Redis.
 - **Telegram Bot API**: For Telegram integration to handle user commands.
 
