@@ -2,15 +2,29 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"main/database"
 	"main/models"
 	"main/utils"
-	"strings"
 
 	telebot "gopkg.in/tucnak/telebot.v2"
 )
 
+func isSuperAdmin(userID uint) bool {
+	var user models.Users
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return false
+	}
+	return user.Role == "SuperAdmin"
+}
+
 func (tg *Telegram) handleAddAd(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can add ads.")
+		return nil
+	}
+
 	input := ctx.Message().Payload
 	if input == "" {
 		ctx.Send("Please provide the ad information in the format: Title|Description|SellPrice|City|Neighborhood|Meters|NumberOfRooms|PhoneNumber.")
@@ -62,6 +76,12 @@ func (tg *Telegram) handleAddAd(ctx telebot.Context) error {
 }
 
 func (tg *Telegram) handleEditAd(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can edit ads.")
+		return nil
+	}
+
 	input := ctx.Message().Payload
 	if input == "" {
 		ctx.Send("Please provide the ad information in the format: AdID|NewTitle|NewDescription|NewSellPrice|City|Neighborhood|Meters|NumberOfRooms|PhoneNumber.")
@@ -118,6 +138,12 @@ func (tg *Telegram) handleEditAd(ctx telebot.Context) error {
 }
 
 func (tg *Telegram) handleDeleteAd(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can delete ads.")
+		return nil
+	}
+
 	adID := utils.ParseUint(ctx.Message().Payload)
 	if adID == 0 {
 		ctx.Send("Please enter the ad ID.")
@@ -134,6 +160,12 @@ func (tg *Telegram) handleDeleteAd(ctx telebot.Context) error {
 }
 
 func (tg *Telegram) handleViewAds(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can view all ads.")
+		return nil
+	}
+
 	ads, err := models.GetAds(database.DB, 0)
 	if err != nil || len(ads) == 0 {
 		ctx.Send("No ads are available to display.")
