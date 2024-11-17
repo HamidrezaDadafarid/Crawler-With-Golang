@@ -614,7 +614,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_filterID":
 		filterID, e := strconv.Atoi(input)
-		if e != nil || filterID == 0 {
+		if e != nil || filterID <= 0 {
 			c.Send("آیدی وارد شده نامعتبر است")
 			t.Loggers.InfoLogger.Println("Invalid filterID")
 			return
@@ -626,7 +626,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_time":
 		wlTime, e := strconv.Atoi(input)
-		if e != nil || wlTime == 0 {
+		if e != nil || wlTime <= 0 {
 			c.Send("زمان وارد شده نامعتبر است")
 			t.Loggers.InfoLogger.Println("Invalid time duration")
 			return
