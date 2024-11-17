@@ -1,8 +1,10 @@
 package telegram
 
 import (
+	"archive/zip"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"main/csv"
 	"main/database"
@@ -19,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"gopkg.in/telebot.v4"
 	"gorm.io/gorm"
 )
@@ -221,7 +224,7 @@ func (t *Telegram) handleAddWatchList(c telebot.Context) (err error) {
 	})
 
 	t.Bot.Handle(&btnTime, func(ctx telebot.Context) (err error) {
-		if wlTime := session.WatchList.Time; wlTime != (time.Minute * 0) {
+		if wlTime := session.WatchList.Time; wlTime != 0 {
 			err = c.Send("بازه زمانی قبلا مشخص شده است", watchListMenu)
 			return
 
@@ -233,6 +236,11 @@ func (t *Telegram) handleAddWatchList(c telebot.Context) (err error) {
 
 	t.Bot.Handle(&btnSubmitWL, func(ctx telebot.Context) (err error) {
 		session := models.GetUserSession(c.Chat().ID)
+		if session.WatchList.FilterId == 0 || session.WatchList.Time == 0 {
+			err = c.Send("لطفا ابتدا تمامی آیتم های خواسته شده را وارد کنید", watchListMenu)
+			t.Loggers.InfoLogger.Println("Empty fields")
+			return
+		}
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
 		gormWL := repository.NewWatchList(database.GetInstnace().Db)
 
@@ -474,7 +482,6 @@ func (t *Telegram) handleShareBookmarks(c telebot.Context) (err error) {
 	return
 }
 
-// TODO
 func (t *Telegram) handleGetOutput(c telebot.Context) error {
 	session := models.GetUserSession(c.Chat().ID)
 	getOutputFileMenu.Reply(
@@ -482,8 +489,58 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 		getOutputFileMenu.Row(btnBackFilterMenu),
 	)
 
-	// TODO
-	t.Bot.Handle(&btnGetOutputFile, func(c telebot.Context) (err error) {
+	t.Bot.Handle(&btnGetAsZip, func(c telebot.Context) (err error) {
+		session.State = "sending_zip_file"
+		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("exporting csv failed")
+		}
+		uniqueZip := fmt.Sprintf("./telegram/%s.zip", uuid.New())
+		adsZip, e := os.Create(uniqueZip)
+
+		if e != nil {
+			t.Loggers.InfoLogger.Println("Creating zip file failed")
+		}
+
+		zipWriter := zip.NewWriter(adsZip)
+
+		f, e := os.Open(filename)
+		if e != nil {
+			t.Loggers.InfoLogger.Println("Opening csv file failed")
+		}
+
+		z, e := zipWriter.Create("Advertisments/ads.csv")
+
+		if e != nil {
+			t.Loggers.InfoLogger.Println("Creating directory in zip file failed")
+		}
+		if _, e := io.Copy(z, f); e != nil {
+			t.Loggers.InfoLogger.Println("Couldn't copy .csv file into zip file")
+		}
+		zipWriter.Close()
+
+		e = t.SendMessageToUser(strconv.Itoa(int(session.ChatID)), &telebot.Document{File: telebot.FromDisk(uniqueZip),
+			FileName:             uniqueZip,
+			DisableTypeDetection: true})
+
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("sending file failed", e)
+			c.Send("مشکلی پیش آمد! مجددا تلاش کنید")
+			os.Remove(uniqueZip)
+			os.Remove(filename)
+			adsZip.Close()
+			f.Close()
+			return
+		}
+
+		adsZip.Close()
+		f.Close()
+		os.Remove(filename)
+		os.Remove(uniqueZip)
+
+		session.State = ""
+		t.Loggers.InfoLogger.Println("Zip output sent")
 		return
 	})
 
@@ -609,7 +666,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_filterID":
 		filterID, e := strconv.Atoi(input)
-		if e != nil {
+		if e != nil || filterID <= 0 {
 			c.Send("آیدی وارد شده نامعتبر است")
 			t.Loggers.InfoLogger.Println("Invalid filterID")
 			return
@@ -621,12 +678,12 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_time":
 		wlTime, e := strconv.Atoi(input)
-		if e != nil {
+		if e != nil || wlTime <= 0 {
 			c.Send("زمان وارد شده نامعتبر است")
 			t.Loggers.InfoLogger.Println("Invalid time duration")
 			return
 		}
-		session.WatchList.Time = (time.Minute * time.Duration(wlTime))
+		session.WatchList.Time = wlTime
 		session.State = ""
 		err = c.Send("بازه زمانی مورد نظر ثبت شد", watchListMenu)
 		t.Loggers.InfoLogger.Println("Set time duration for watch-list")
