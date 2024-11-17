@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"myproject/database"
-	"myproject/models"
-	"myproject/utils"
+	"main/database"
+	"main/models"
+	"main/utils"
 	"strings"
 
 	telebot "gopkg.in/tucnak/telebot.v2"
