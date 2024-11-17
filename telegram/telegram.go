@@ -221,7 +221,7 @@ func (t *Telegram) handleAddWatchList(c telebot.Context) (err error) {
 	})
 
 	t.Bot.Handle(&btnTime, func(ctx telebot.Context) (err error) {
-		if wlTime := session.WatchList.Time; wlTime != (time.Minute * 0) {
+		if wlTime := session.WatchList.Time; wlTime != 0 {
 			err = c.Send("بازه زمانی قبلا مشخص شده است", watchListMenu)
 			return
 
@@ -233,6 +233,11 @@ func (t *Telegram) handleAddWatchList(c telebot.Context) (err error) {
 
 	t.Bot.Handle(&btnSubmitWL, func(ctx telebot.Context) (err error) {
 		session := models.GetUserSession(c.Chat().ID)
+		if session.WatchList.FilterId == 0 || session.WatchList.Time == 0 {
+			err = c.Send("لطفا ابتدا تمامی آیتم های خواسته شده را وارد کنید", watchListMenu)
+			t.Loggers.InfoLogger.Println("Empty fields")
+			return
+		}
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
 		gormWL := repository.NewWatchList(database.GetInstnace().Db)
 
@@ -609,7 +614,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_filterID":
 		filterID, e := strconv.Atoi(input)
-		if e != nil {
+		if e != nil || filterID == 0 {
 			c.Send("آیدی وارد شده نامعتبر است")
 			t.Loggers.InfoLogger.Println("Invalid filterID")
 			return
@@ -621,12 +626,12 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_time":
 		wlTime, e := strconv.Atoi(input)
-		if e != nil {
+		if e != nil || wlTime == 0 {
 			c.Send("زمان وارد شده نامعتبر است")
 			t.Loggers.InfoLogger.Println("Invalid time duration")
 			return
 		}
-		session.WatchList.Time = (time.Minute * time.Duration(wlTime))
+		session.WatchList.Time = wlTime
 		session.State = ""
 		err = c.Send("بازه زمانی مورد نظر ثبت شد", watchListMenu)
 		t.Loggers.InfoLogger.Println("Set time duration for watch-list")
