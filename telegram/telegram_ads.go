@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"strings"
-	"main/database"
-	"main/models"
-	"main/utils"
-
-	telebot "gopkg.in/tucnak/telebot.v2"
+	"crawler-with-golang/database"
+	"crawler-with-golang/models"
+	"crawler-with-golang/utils"
 )
 
 func isSuperAdmin(userID uint) bool {
