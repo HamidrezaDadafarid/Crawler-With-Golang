@@ -2,6 +2,9 @@ package crawler
 
 import (
 	"log"
+	"main/database"
+	"main/models"
+	"main/repository"
 	"os"
 	"os/signal"
 	"sync"
@@ -15,6 +18,7 @@ type rodinstance struct {
 
 func StartCrawler(page int, d bool, s bool) {
 	rodInstance := make(chan *rod.Browser, 1)
+	gormMetric := repository.NewGormUMetric(database.GetInstnace().Db)
 
 	var (
 		waitGroup sync.WaitGroup
@@ -48,8 +52,11 @@ func StartCrawler(page int, d bool, s bool) {
 			}
 
 			if d {
+				meric := models.Metrics{}
 				divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
+				t := time.Now()
 				divarCrawler.Start()
+				meric.TimeSpent = time.Since(t).Seconds()
 			}
 
 			if s {

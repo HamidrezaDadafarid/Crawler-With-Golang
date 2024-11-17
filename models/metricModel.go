@@ -4,8 +4,8 @@ import "gorm.io/gorm"
 
 type Metrics struct {
 	gorm.Model
-	ID                  uint `gorm:"primaryKey;autoIncrement"`
-	TimeSpent           uint //second
+	ID                  uint    `gorm:"primaryKey;autoIncrement"`
+	TimeSpent           float64 //second
 	CpuUsage            uint
 	RamUsage            uint
 	RequestCount        uint
