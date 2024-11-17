@@ -25,7 +25,7 @@ func StartCrawler(page int, d bool, s bool) {
 	}()
 
 	select {
-	case <-time.After(time.Second * 5):
+	case <-time.After(time.Second * 15):
 		log.Println("TIMEOUT WHEN STARTING CRAWLER")
 	case rod := <-rodInstance:
 
@@ -39,14 +39,25 @@ func StartCrawler(page int, d bool, s bool) {
 			os.Exit(0)
 		}()
 
-		if d {
-			divarCrawler := NewDivarCrawler(page, &waitGroup, rod)
-			divarCrawler.Start()
-		}
+		for {
 
-		if s {
-			sheypoorCrawler := NewSheypoorCrawler(page, &waitGroup, *&rod)
-			sheypoorCrawler.Start()
+			settings, err := readConfig()
+
+			if err != nil {
+				log.Fatal("CRAWLER CONFIG ERROR")
+			}
+
+			if d {
+				divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
+				divarCrawler.Start()
+			}
+
+			if s {
+				sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
+				sheypoorCrawler.Start()
+			}
+
+			time.Sleep(settings.Ticker * time.Minute)
 		}
 	}
 

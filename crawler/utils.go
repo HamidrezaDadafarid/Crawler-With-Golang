@@ -114,3 +114,18 @@ func getCities() (Cities, error) {
 	return cities, nil
 
 }
+
+// returns ticker , timeout, max
+func readConfig() (*Settings, error) {
+	file, err := os.ReadFile(`./config/config.json`)
+
+	if err != nil {
+		return &Settings{}, err
+	}
+
+	var s Settings
+
+	json.Unmarshal(file, &s)
+
+	return &s, nil
+}

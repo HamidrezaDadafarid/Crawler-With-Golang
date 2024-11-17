@@ -1,6 +1,8 @@
 package crawler
 
 import (
+	"fmt"
+	"log"
 	"main/database"
 	"main/models"
 	"main/repository"
@@ -18,32 +20,49 @@ type Crawler interface {
 }
 
 type CrawlerAbstract struct {
-	Page      int
 	Wg        *sync.WaitGroup
 	Collector *rod.Browser
 	Crawler   Crawler
+	Settings  *Settings
 }
 
-func (c *CrawlerAbstract) Start(t time.Duration) {
-	defer c.Collector.Close()
-	Ads := c.Crawler.GetTargets(c.Page, c.Collector)
+type Settings struct {
+	Items   uint          `json:"CRAWLER_MAX_ITEMS"`
+	Page    int           `json:"PAGE"`
+	Timeout time.Duration `json:"CRAWLER_TIMEOUT"`
+	Ticker  time.Duration `json:"CRAWLER_TICKER"`
+}
 
-	timeout := time.NewTimer(t)
+func (c *CrawlerAbstract) Start() {
 
+	Ads := c.Crawler.GetTargets(c.Settings.Page, c.Collector)
+
+	c.iterateThroughAds(Ads)
+
+	Ads = c.validateItems(Ads)
+	fmt.Println(len(Ads))
+	c.sendDataToDB(Ads)
+}
+
+func (c *CrawlerAbstract) iterateThroughAds(Ads []*Ads) {
+	defer c.Wg.Wait()
+
+	timeout := time.NewTimer(c.Settings.Timeout * time.Second)
+	log.Println(len(Ads))
 	for i := 0; i < len(Ads); i++ {
 
 		select {
 		case <-timeout.C:
-			break
-		case <-time.After(time.Millisecond * 1500):
+			log.Println("crawler timeout [SHEYPOOR]")
+			return
+		case <-time.After(time.Millisecond * 2000):
 			c.Wg.Add(1)
 			go c.Crawler.GetDetails(Ads[i], c.Collector, c.Wg)
+
 		}
 
 	}
-	c.Wg.Wait()
-	Ads = c.validateItems(Ads)
-	c.sendDataToDB(Ads)
+
 }
 
 func (c *CrawlerAbstract) sendDataToDB(a []*Ads) {
@@ -60,6 +79,6 @@ func (b *CrawlerAbstract) validateItems(adList []*Ads) []*Ads {
 			res = append(res, adList[i])
 		}
 	}
-	return adList
+	return res
 
 }

@@ -1,0 +1,6 @@
+{
+    "CRAWLER_TIMEOUT": 800,
+    "CRAWLER_TICKER": 5,
+    "CRAWLER_MAX_ITEMS": 48,
+    "PAGE":0
+}
