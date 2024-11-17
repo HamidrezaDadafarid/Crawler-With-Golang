@@ -53,7 +53,7 @@ func TestWatchListRepo(t *testing.T) {
 	err = watchListRepo.Add(models.WatchList{
 		UserID:   addedUser.ID,
 		FilterId: addedFilter.ID,
-		Time:     time.Now(),
+		Time:     2,
 	})
 
 	if err != nil {
