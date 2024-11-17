@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/shirou/gopsutil/cpu"
 )
 
 type rodinstance struct {
@@ -52,16 +53,41 @@ func StartCrawler(page int, d bool, s bool) {
 			}
 
 			if d {
-				meric := models.Metrics{}
+				metric := models.Metrics{}
 				divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
 				t := time.Now()
 				divarCrawler.Start()
-				meric.TimeSpent = time.Since(t).Seconds()
+				metric.TimeSpent = time.Since(t).Seconds()
 			}
 
 			if s {
+				percentChanel := make(chan bool, 1)
+				result := 0.0
+				counter := 0
+				go func() {
+					for {
+						percent, _ := cpu.Percent(0, true)
+						temp := 0.0
+						for _, item := range percent {
+							temp += item
+						}
+						result += temp / float64(len(percent))
+						counter++
+						time.Sleep(time.Millisecond * 100)
+						select {
+						case <-percentChanel:
+							return
+						}
+					}
+				}()
+				metric := models.Metrics{}
 				sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
+				t := time.Now()
 				sheypoorCrawler.Start()
+				metric.TimeSpent = time.Since(t).Seconds()
+				percentChanel <- true
+				metric.CpuUsage = result / float64(counter)
+
 			}
 
 			time.Sleep(settings.Ticker * time.Minute)
