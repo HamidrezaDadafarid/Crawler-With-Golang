@@ -13,7 +13,7 @@ import (
 type rodinstance struct {
 }
 
-func StartCrawler(page int, d bool, s bool) {
+func StartCrawler() {
 	rodInstance := make(chan *rod.Browser, 1)
 
 	var (
@@ -40,23 +40,20 @@ func StartCrawler(page int, d bool, s bool) {
 		}()
 
 		for {
-
+			log.Println("STARTING CRAWLER")
 			settings, err := readConfig()
 
 			if err != nil {
 				log.Fatal("CRAWLER CONFIG ERROR")
 			}
 
-			if d {
-				divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
-				divarCrawler.Start()
-			}
+			divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
+			divarCrawler.Start()
 
-			if s {
-				sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
-				sheypoorCrawler.Start()
-			}
+			sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
+			sheypoorCrawler.Start()
 
+			log.Println("CRAWLER ON SLEEP")
 			time.Sleep(settings.Ticker * time.Minute)
 		}
 	}

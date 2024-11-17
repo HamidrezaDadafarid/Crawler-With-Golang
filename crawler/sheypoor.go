@@ -151,9 +151,13 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 			ad.FloorNumber = numeric
 		}
 
+		ad.City = getCity(collector, `div._3oBho`)
+		ad.Mahale = getNeighbourhood(collector, `div._3oBho`)
+
 	}()
 	select {
 	case <-time.After(time.Second * 10):
+		ad.CategoryAV = 2
 		log.Println("ERROR", ad.UniqueId)
 		return
 	case <-done:

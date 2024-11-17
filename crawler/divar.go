@@ -47,6 +47,7 @@ func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 	var Ads []*Advertisement
 
 	collector := bInstance.MustPage(visit)
+	defer collector.Close()
 
 	collector.MustWaitElementsMoreThan(`a[class=kt-post-card__action]`, 10)
 
@@ -59,7 +60,6 @@ func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 	}
 
 	log.Println("SUCCESS FOR GRABBING")
-	collector.Close()
 	return Ads
 }
 
@@ -149,14 +149,15 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 			ad.Longitude = long
 		}
 
-		ad.City = getCity(collector)
-		ad.Mahale = getNeighbourhood(collector)
+		ad.City = getCity(collector, `kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`)
+		ad.Mahale = getNeighbourhood(collector, `kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`)
 
 		ad.PictureLink = getPicture(collector)
 	}()
 
 	select {
 	case <-time.After(time.Second * 10):
+		ad.CategoryAV = 2
 		log.Println("ERROR", ad.UniqueId)
 		return
 	case <-done:
@@ -235,35 +236,6 @@ func getFloor(collector *rod.Page) int {
 	floor := getNumbersFromSections(`\u0637\u0628\u0642\u0647`, collector)
 	r := regexp.MustCompile(`[۱-۹]+`) // numbers are persian
 	return changeFarsiToEng(r.FindString(floor))
-}
-
-// These 2 functions should be merged later. they do the same job
-func getNeighbourhood(collector *rod.Page) string {
-
-	all, _ := getDistricts()
-	lst := all.Districts
-
-	for i := range lst {
-		if ok, _, _ := collector.HasR(`div.kt-page-title__subtitle`, lst[i].Display); ok {
-			return lst[i].Display
-		}
-
-	}
-	return ""
-}
-
-func getCity(collector *rod.Page) string {
-
-	all, _ := getCities()
-	lst := all.Cities
-
-	for i := range lst {
-		if ok, _, _ := collector.HasR(`div.kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`, lst[i].Display); ok {
-			return lst[i].Display
-		}
-
-	}
-	return ""
 }
 
 func getSurfaceAndYearAndRooms(collector *rod.Page) (int, int, int) {
