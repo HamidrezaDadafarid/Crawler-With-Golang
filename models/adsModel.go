@@ -6,7 +6,6 @@ import (
 
 type Ads struct {
 	gorm.Model
-	ID            uint `gorm:"primaryKey;autoIncrement"`
 	Link          string
 	UniqueId      string `gorm:"unique;not null"`
 	Longitude     float64
