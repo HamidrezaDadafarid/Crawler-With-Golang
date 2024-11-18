@@ -7,6 +7,8 @@ import (
 	"main/telegram"
 	"os"
 
+	crawler "main/crawler"
+
 	"github.com/joho/godotenv"
 )
 
@@ -29,4 +31,9 @@ func main() {
 	}
 
 	telegram.Start()
+	// For testing db review for final codes
+	// dbManager := database.GetInstnace()
+	// dbManager.Db.AutoMigrate(&models.Ads{})
+	crawler.StartCrawler()
+
 }
