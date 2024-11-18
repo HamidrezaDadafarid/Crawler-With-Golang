@@ -29,9 +29,6 @@ func main() {
 	// }
 
 	// go telegram.Start()
-	// For testing db review for final codes
-	// dbManager := database.GetInstnace()
-	// dbManager.Db.AutoMigrate(&models.Ads{})
 	go crawler.StartCrawler()
 	select {}
 

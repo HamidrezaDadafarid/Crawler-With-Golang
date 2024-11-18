@@ -156,6 +156,10 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 		ad.City = getCity(collector, `div._3oBho`)
 		ad.Neighborhood = getNeighbourhood(collector, `div._3oBho`)
 
+		pic := collector.MustElement(`img`).MustProperty(`src`).Str()
+
+		ad.PictureLink = pic
+
 	}()
 	select {
 	case <-time.After(time.Second * 10):
