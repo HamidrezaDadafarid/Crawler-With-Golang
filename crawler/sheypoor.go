@@ -107,7 +107,7 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 
 						switch key {
 						case `انباری`:
-							ad.Anbary = ok
+							ad.Storage = ok
 						case `آسانسور`:
 							ad.Elevator = ok
 						case `پارکینگ`:
@@ -150,11 +150,11 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 		numeric, err := strconv.Atoi(floorcleaned)
 
 		if err == nil {
-			ad.FloorNumber = numeric
+			ad.FloorNumber = uint(numeric)
 		}
 
 		ad.City = getCity(collector, `div._3oBho`)
-		ad.Mahale = getNeighbourhood(collector, `div._3oBho`)
+		ad.Neighborhood = getNeighbourhood(collector, `div._3oBho`)
 
 	}()
 	select {

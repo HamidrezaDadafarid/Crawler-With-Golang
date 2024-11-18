@@ -30,10 +30,11 @@ func main() {
 		log.Fatalf("Error initializing Telegram bot: %v", err)
 	}
 
-	telegram.Start()
+	go telegram.Start()
 	// For testing db review for final codes
 	// dbManager := database.GetInstnace()
 	// dbManager.Db.AutoMigrate(&models.Ads{})
-	crawler.StartCrawler()
+	go crawler.StartCrawler()
+	select {}
 
 }

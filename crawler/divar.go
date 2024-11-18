@@ -89,7 +89,7 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 
 		ok, _, _ := collector.HasR(`td`, `^\u0627\u0646\u0628\u0627\u0631\u06cc$`) // checks for warehouse
 
-		ad.Anbary = ok
+		ad.Storage = ok
 
 		ok, _, _ = collector.HasR(`td`, `^\u0622\u0633\u0627\u0646\u0633\u0648\u0631$`) // checks for elevator
 
@@ -126,7 +126,7 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 		}
 
 		if val := getFloor(collector); val != -1 {
-			ad.FloorNumber = val
+			ad.FloorNumber = uint(val)
 		}
 
 		surface, year, rooms := getSurfaceAndYearAndRooms(collector)
@@ -151,7 +151,7 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 		}
 
 		ad.City = getCity(collector, `kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`)
-		ad.Mahale = getNeighbourhood(collector, `kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`)
+		ad.Neighborhood = getNeighbourhood(collector, `kt-page-title__subtitle.kt-page-title__subtitle--responsive-sized`)
 
 		ad.PictureLink = getPicture(collector)
 	}()
@@ -160,10 +160,10 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	case <-time.After(time.Second * 10):
 		ad.CategoryAV = 2
 		log.Println("ERROR", ad.UniqueId)
-		d.Metric.FailRequestCount++
+		// d.Metric.FailRequestCount++
 		return
 	case <-done:
-		d.Metric.SucceedRequestCount++
+		// d.Metric.SucceedRequestCount++
 		log.Println("finished job", ad.UniqueId)
 		return
 	}

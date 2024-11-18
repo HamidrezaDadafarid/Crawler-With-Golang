@@ -6,9 +6,9 @@ import (
 
 type Ads struct {
 	gorm.Model
-	ID            uint   `gorm:"primaryKey;autoIncrement"`
-	Link          string `gorm:"unique;not null"`
-	UniqueId      string
+	ID            uint `gorm:"primaryKey;autoIncrement"`
+	Link          string
+	UniqueId      string `gorm:"unique;not null"`
 	Longitude     float64
 	Latitude      float64
 	Description   string
@@ -33,25 +33,24 @@ type Ads struct {
 }
 
 func AddAd(db *gorm.DB, ad *Ads) error {
-    return db.Create(ad).Error
+	return db.Create(ad).Error
 }
 
 func DeleteAd(db *gorm.DB, adID uint) error {
-    return db.Delete(&Ads{}, adID).Error
+	return db.Delete(&Ads{}, adID).Error
 }
 
 func EditAd(db *gorm.DB, ad *Ads) error {
-    return db.Save(ad).Error
+	return db.Save(ad).Error
 }
 
 func GetAds(db *gorm.DB, adID uint) ([]Ads, error) {
-    var ads []Ads
-    var result *gorm.DB
-    if adID != 0 {
-        result = db.Where("id = ?", adID).Find(&ads)
-    } else {
-        result = db.Find(&ads)
-    }
-    return ads, result.Error
+	var ads []Ads
+	var result *gorm.DB
+	if adID != 0 {
+		result = db.Where("id = ?", adID).Find(&ads)
+	} else {
+		result = db.Find(&ads)
+	}
+	return ads, result.Error
 }
-

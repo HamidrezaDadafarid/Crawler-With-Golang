@@ -43,7 +43,7 @@ func (c *CrawlerAbstract) Start() {
 
 	Ads = c.validateItems(Ads)
 	fmt.Println(len(Ads))
-	// c.sendDataToDB(Ads)
+	c.sendDataToDB(Ads)
 }
 
 func (c *CrawlerAbstract) iterateThroughAds(Ads []*Ads) {
