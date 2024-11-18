@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"fmt"
 	"log"
 	"main/database"
 	"main/models"
@@ -112,7 +113,37 @@ func StartCrawler() {
 			gormMetric.Add(metric)
 
 			log.Println("CRAWLER ON SLEEP")
-			time.Sleep(settings.Ticker * time.Minute)
+
+			if 22 <= time.Now().Hour() {
+
+				fmt.Println("NIGGER NIGGER NIGGER NIGGER")
+
+				gAd := repository.NewGormAd(database.GetInstnace().Db)
+
+				ads, _ := repository.GetAds(database.GetInstnace().Db, 0)
+				for i := 0; i < len(ads); i += 2 {
+					if ads[i].Link == "divar" {
+						waitGroup.Add(2)
+						go divarCrawler.Crawler.GetDetails(&ads[i], rod, &waitGroup)
+						go divarCrawler.Crawler.GetDetails(&ads[i+1], rod, &waitGroup)
+
+					} else {
+						waitGroup.Add(2)
+						go sheypoorCrawler.Crawler.GetDetails(&ads[i], rod, &waitGroup)
+						go sheypoorCrawler.Crawler.GetDetails(&ads[i+1], rod, &waitGroup)
+					}
+					waitGroup.Wait()
+					gAd.Update(ads[i])
+					gAd.Update(ads[i+1])
+
+					time.Sleep(900 * time.Millisecond)
+				}
+
+				time.Sleep(1 * time.Hour)
+
+			} else {
+				time.Sleep(settings.Ticker * time.Minute)
+			}
 		}
 	}
 
