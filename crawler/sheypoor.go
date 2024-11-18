@@ -3,6 +3,7 @@ package crawler
 import (
 	"fmt"
 	"log"
+	"main/models"
 	"regexp"
 	"strconv"
 	"sync"
@@ -17,12 +18,13 @@ type sheypoor struct {
 
 const urlSheypoor = "https://www.sheypoor.com/s/iran/real-estate?page=%d"
 
-func NewSheypoorCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings) *CrawlerAbstract {
+func NewSheypoorCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings, metric *models.Metrics) *CrawlerAbstract {
 	d := CrawlerAbstract{
 		Crawler:   &sheypoor{},
 		Wg:        wg,
 		Collector: col,
 		Settings:  s,
+		Metric:    metric,
 	}
 	return &d
 }

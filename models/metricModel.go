@@ -8,7 +8,7 @@ type Metrics struct {
 	TimeSpent           float64 //second
 	CpuUsage            float64
 	RamUsage            float64
-	RequestCount        uint
-	succeedRequestCount uint
+	RequestCount        int
+	SucceedRequestCount uint
 	FailRequestCount    uint
 }

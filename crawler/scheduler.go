@@ -3,6 +3,7 @@ package crawler
 import (
 	"log"
 	"main/database"
+	"main/models"
 	"main/repository"
 	"os"
 	"os/signal"
@@ -10,6 +11,8 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 )
 
 type rodinstance struct {
@@ -50,11 +53,63 @@ func StartCrawler() {
 				log.Fatal("CRAWLER CONFIG ERROR")
 			}
 
-			divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
+			finished := false
+			result := 0.0
+			memoryResult := 0.0
+			counter := 0
+			go func() {
+				for {
+					percent, _ := cpu.Percent(0, true)
+					v, _ := mem.VirtualMemory()
+					temp := 0.0
+					for _, item := range percent {
+						temp += item
+					}
+					memoryResult += v.UsedPercent
+					result += temp / float64(len(percent))
+					counter++
+					time.Sleep(time.Millisecond * 100)
+					if finished {
+						return
+					}
+				}
+			}()
+			metric := models.Metrics{}
+			divarCrawler := NewDivarCrawler(&waitGroup, rod, settings, &metric)
+			t := time.Now()
 			divarCrawler.Start()
+			metric.TimeSpent = time.Since(t).Seconds()
+			finished = true
+			metric.CpuUsage = result / float64(counter)
+			metric.RamUsage = memoryResult / float64(counter)
+			gormMetric.Add(metric)
 
-			sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
+			finished = false
+			result = 0.0
+			counter = 0
+			go func() {
+				for {
+					percent, _ := cpu.Percent(0, true)
+					temp := 0.0
+					for _, item := range percent {
+						temp += item
+					}
+					result += temp / float64(len(percent))
+					counter++
+					time.Sleep(time.Millisecond * 100)
+					if finished {
+						return
+					}
+				}
+			}()
+			metric = models.Metrics{}
+			sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings, &metric)
+			t = time.Now()
 			sheypoorCrawler.Start()
+			metric.TimeSpent = time.Since(t).Seconds()
+			finished = true
+			metric.CpuUsage = result / float64(counter)
+			gormMetric.Add(metric)
 
 			log.Println("CRAWLER ON SLEEP")
 			time.Sleep(settings.Ticker * time.Minute)

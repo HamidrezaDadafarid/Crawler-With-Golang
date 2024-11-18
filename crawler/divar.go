@@ -20,12 +20,13 @@ type divar struct {
 	*CrawlerAbstract
 }
 
-func NewDivarCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings) *CrawlerAbstract {
+func NewDivarCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings, metric *models.Metrics) *CrawlerAbstract {
 	d := CrawlerAbstract{
 		Crawler:   &divar{},
 		Wg:        wg,
 		Collector: col,
 		Settings:  s,
+		Metric:    metric,
 	}
 	return &d
 }
@@ -159,8 +160,10 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	case <-time.After(time.Second * 10):
 		ad.CategoryAV = 2
 		log.Println("ERROR", ad.UniqueId)
+		d.Metric.FailRequestCount++
 		return
 	case <-done:
+		d.Metric.SucceedRequestCount++
 		log.Println("finished job", ad.UniqueId)
 		return
 	}

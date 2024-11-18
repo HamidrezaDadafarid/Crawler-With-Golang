@@ -24,6 +24,7 @@ type CrawlerAbstract struct {
 	Collector *rod.Browser
 	Crawler   Crawler
 	Settings  *Settings
+	Metric    *models.Metrics
 }
 
 type Settings struct {
@@ -36,7 +37,8 @@ type Settings struct {
 func (c *CrawlerAbstract) Start() {
 
 	Ads := c.Crawler.GetTargets(c.Settings.Page, c.Collector)
-
+	c.Metric.RequestCount = len(Ads) + 1
+	c.Metric.SucceedRequestCount++
 	c.iterateThroughAds(Ads)
 
 	Ads = c.validateItems(Ads)
