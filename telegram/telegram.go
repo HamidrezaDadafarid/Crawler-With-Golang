@@ -444,18 +444,23 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
 		session := models.GetUserSession(c.Chat().ID)
 		gormFilter := repository.NewGormFilter(database.GetInstnace().Db)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		u, _ := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		gormUserAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
 
 		gormFilter.Add(session.Filters)
+		gormAd := repository.NewGormAd(database.GetInstnace().Db)
+		ads, e := gormAd.Get(session.Filters)
+		if e == nil {
+			for _, ad := range ads {
+				gormUserAd.Add(models.Users_Ads{UserId: u.ID,
+					AdId: ad.ID})
+				t.Loggers.ErrorLogger.Println(ad)
+			}
+		}
+
 		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", session.Filters.ID), userMenu)
 
-		// gormAd := repository.NewGormAd(database.GetInstnace().Db)
-		// ads, e := gormAd.Get(session.Filters)
-		// if e != nil {
-		// 	for _, ad := range ads {
-
-		// 		c.Send()
-		// 	}
-		// }
 	})
 
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
@@ -678,8 +683,8 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_time":
 		wlTime, e := strconv.Atoi(input)
-		if e != nil || wlTime <= 0 {
-			c.Send("زمان وارد شده نامعتبر است")
+		if e != nil || wlTime <= 5 {
+			c.Send("زمان وارد شده نامعتبر است! حداقل 5 دقیقه")
 			t.Loggers.InfoLogger.Println("Invalid time duration")
 			return
 		}
