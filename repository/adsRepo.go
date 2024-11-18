@@ -37,7 +37,7 @@ func (g *gormAd) Delete(id uint) error {
 
 func (g *gormAd) Get(filter models.Filters) ([]models.Ads, error) {
 	var ads []models.Ads
-	result := g.Db.Where("SellPrice BETWEEN ? AND ? OR RentPrice BETWEEN ? AND ? OR MortagePrice BETWEEN ? AND ? OR City LIKE ? OR Mahale LIKE ? OR NumberOfRooms BETWEEN ? AND ? OR CategoryPMR = ? OR CategoryAV = ? OR Age BETWEEN ? AND ? OR FloorNumber BETWEEN ? AND ? OR Anbary = ? OR ELevator = ?", filter.StartPrice, filter.EndPrice, filter.StartPrice, filter.EndPrice, filter.StartPrice, filter.EndPrice, filter.City, filter.Neighborhood, filter.StartNumberOfRooms, filter.EndNumberOfRooms, filter.CategoryAV, filter.CategoryPMR, filter.StartAge, filter.EndAge, filter.StartFloorNumber, filter.EndFloorNumber, filter.Anbary, filter.Elevator).Find(&ads)
+	result := g.Db.Where("sell_price BETWEEN ? AND ? OR rent_price BETWEEN ? AND ? OR mortage_price BETWEEN ? AND ? OR city LIKE ? OR neighborhood LIKE ? OR number_of_rooms BETWEEN ? AND ? OR category_av = ? OR category_pr = ? OR age BETWEEN ? AND ? OR floor_number BETWEEN ? AND ? OR storage = ? OR elevator = ?", filter.StartPurchasePrice, filter.EndPurchasePrice, filter.StartRentPrice, filter.EndRentPrice, filter.StartMortgagePrice, filter.EndMortgagePrice, filter.City, filter.Neighborhood, filter.StartNumberOfRooms, filter.EndNumberOfRooms, filter.CategoryAV, filter.CategoryPR, filter.StartAge, filter.EndAge, filter.StartFloorNumber, filter.EndFloorNumber, filter.Storage, filter.Elevator).Find(&ads)
 	return ads, result.Error
 }
 
@@ -52,4 +52,31 @@ func (g *gormAd) Update(ad models.Ads) error {
 	return result.Error
 }
 
+func (g *gormAd) IncreaseView(adId int) error {
+	return g.Db.Raw("UPDATE ads SET number_of_views = number_of_views + 1 WHERE id = ?", adId).Error
+}
+
 var _ Ad = (*gormAd)(nil)
+
+func AddAd(db *gorm.DB, ad *models.Ads) error {
+	return db.Create(ad).Error
+}
+
+func DeleteAd(db *gorm.DB, adID uint) error {
+	return db.Delete(&models.Ads{}, adID).Error
+}
+
+func EditAd(db *gorm.DB, ad *models.Ads) error {
+	return db.Save(ad).Error
+}
+
+func GetAds(db *gorm.DB, adID uint) ([]models.Ads, error) {
+	var ads []models.Ads
+	var result *gorm.DB
+	if adID != 0 {
+		result = db.Where("id = ?", adID).Find(&ads)
+	} else {
+		result = db.Find(&ads)
+	}
+	return ads, result.Error
+}

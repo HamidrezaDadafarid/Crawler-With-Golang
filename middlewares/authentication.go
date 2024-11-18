@@ -1,35 +1,24 @@
 package middlewares
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Authentication(pass string) bool {
-	// Loads .env file from main directory
-	err := godotenv.Load("../.env")
+func Authentication(pass string) (error, bool) {
+
+	err := godotenv.Load("./.env")
 	if err != nil {
-		log.Println("Couldn't open .env file")
-		return false
+		return err, false
 	}
 
-	// Using (PASSWORD) as a key to search for hashed pass in env file
-	storedH := os.Getenv("PASSWORD")
+	storedH := os.Getenv("SUPER_ADMIN_PASSWORD")
 
-	if storedH == "" {
-		log.Println("NO PASSWORD HAS BEEN CONFIGURED!")
-		return false
-	}
-	// Compares hash with given password
 	err = bcrypt.CompareHashAndPassword([]byte(storedH), []byte(pass))
 	if err != nil {
-		log.Println("Invalid password!")
-		return false
+		return err, false
 	}
-	log.Println("Vallid password")
-	return true
-
+	return nil, true
 }

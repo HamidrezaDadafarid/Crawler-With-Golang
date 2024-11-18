@@ -15,34 +15,36 @@ func TestWatchListRepo(t *testing.T) {
 	watchListRepo := repository.NewWatchList(dbManager.Db)
 
 	addedUser, err := userRepo.Add(models.Users{
-		TelegramId:       "telegram id",
-		Role:             "User",
-		MaxSearchedItems: 10,
-		TimeLimit:        100,
+		TelegramId: "telegram id",
+		Role:       "User",
 	})
 	if err != nil {
 		t.Error("failed to add user")
 	}
 
 	addedFilter, err := filterRepo.Add(models.Filters{
-		StartPrice:         10,
-		EndPrice:           11,
-		City:               "Test",
-		Neighborhood:       "TestNeighbor",
-		SartArea:           10,
-		EndArea:            10,
-		StartNumberOfRooms: 1,
-		EndNumberOfRooms:   1000,
-		CategoryPMR:        1,
-		StartAge:           0,
-		EndAge:             100,
-		CategoryAV:         2,
-		StartFloorNumber:   0,
-		EndFloorNumber:     10,
-		Anbary:             true,
-		Elevator:           true,
-		StartDate:          time.Now(),
-		EndDate:            time.Now().Add(time.Hour * 48),
+		StartPurchasePrice: models.Ptr(uint(10)),
+		EndPurchasePrice:   models.Ptr(uint(11)),
+		StartRentPrice:     models.Ptr(uint(12)),
+		EndRentPrice:       models.Ptr(uint(13)),
+		StartMortgagePrice: models.Ptr(uint(14)),
+		EndMortgagePrice:   models.Ptr(uint(15)),
+		City:               models.Ptr("Test"),
+		Neighborhood:       models.Ptr("TestNeighborhood"),
+		StartArea:          models.Ptr(uint(10)),
+		EndArea:            models.Ptr(uint(11)),
+		StartNumberOfRooms: models.Ptr(uint(1)),
+		EndNumberOfRooms:   models.Ptr(uint(1000)),
+		CategoryPR:         models.Ptr(uint(1)),
+		StartAge:           models.Ptr(uint(0)),
+		EndAge:             models.Ptr(uint(100)),
+		CategoryAV:         models.Ptr(uint(2)),
+		StartFloorNumber:   models.Ptr(uint(2)),
+		EndFloorNumber:     models.Ptr(uint(10)),
+		Storage:            models.Ptr(true),
+		Elevator:           models.Ptr(true),
+		StartDate:          models.Ptr(time.Now()),
+		EndDate:            models.Ptr(time.Now().Add(time.Hour * 48)),
 	})
 	if err != nil {
 		t.Error("failed to add filter")
@@ -51,7 +53,7 @@ func TestWatchListRepo(t *testing.T) {
 	err = watchListRepo.Add(models.WatchList{
 		UserID:   addedUser.ID,
 		FilterId: addedFilter.ID,
-		Time:     time.Now(),
+		Time:     2,
 	})
 
 	if err != nil {

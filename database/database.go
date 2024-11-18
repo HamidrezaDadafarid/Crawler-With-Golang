@@ -21,7 +21,7 @@ func GetInstnace() *DatabaseManager {
 		lock.Lock()
 		defer lock.Unlock()
 		if instance == nil {
-			dsn := "host=localhost user=postgres password=1234 dbname=CrawlerDb port=5432 sslmode=disable TimeZone=Asia/Tehran"
+			dsn := "host=localhost user=postgres password=1234 dbname=crawlerdb port=5432 sslmode=disable TimeZone=Asia/Tehran"
 
 			db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 				Logger: logger.Default.LogMode(logger.Info),

@@ -19,14 +19,14 @@ func TestAdsRepo(t *testing.T) {
 		NumberOfViews: 11,
 		SellPrice:     100,
 		City:          "Shiraz",
-		Mahale:        "mahale",
+		Neighborhood:  "mahale",
 		Meters:        1000,
 		NumberOfRooms: 10,
 		CategoryPR:    1,
 		Age:           10,
 		CategoryAV:    2,
 		FloorNumber:   1,
-		Anbary:        true,
+		Storage:       true,
 		Elevator:      true,
 		Title:         "Best",
 	})
@@ -44,32 +44,32 @@ func TestAdsRepo(t *testing.T) {
 		NumberOfViews: 11,
 		SellPrice:     100,
 		City:          "Shiraz",
-		Mahale:        "mahale",
+		Neighborhood:  "mahale",
 		Meters:        1000,
 		NumberOfRooms: 10,
 		CategoryPR:    1,
 		Age:           10,
 		CategoryAV:    2,
 		FloorNumber:   1,
-		Anbary:        true,
+		Storage:       true,
 		Elevator:      true,
 		Title:         "Best",
 	})
 
 	if updateErr != nil {
-		t.Errorf("failed to update advertisement")
+		t.Error("failed to update advertisement ")
 	}
 
 	byIdAd, err := adRepo.GetById([]uint{ad.ID})
 	if err != nil || byIdAd[0].ID != ad.ID {
-		t.Errorf("failed to get by id advertisement")
+		t.Error("failed to get by id advertisement")
 	}
 	if byIdAd[0].Description != "some description updated" {
-		t.Errorf("failed to update advertisement")
+		t.Error("failed to update advertisement")
 	}
 
 	byFilter, err := adRepo.Get(models.Filters{
-		Elevator: false,
+		Elevator: models.Ptr(false),
 	})
 
 	if err != nil {
