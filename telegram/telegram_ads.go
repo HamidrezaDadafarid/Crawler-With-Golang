@@ -1,115 +1,188 @@
-package telegram
+package main
 
 import (
 	"fmt"
-	"main/database"
-	"main/models"
-	"strconv"
 	"strings"
-
-	"gopkg.in/telebot.v4"
+	"crawler-with-golang/database"
+	"crawler-with-golang/models"
+	"crawler-with-golang/utils"
 )
 
+func isSuperAdmin(userID uint) bool {
+	var user models.Users
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return false
+	}
+	return user.Role == "SuperAdmin"
+}
+
 func (tg *Telegram) handleAddAd(ctx telebot.Context) error {
-	adDetails := strings.Split(ctx.Text(), "|")
-	if len(adDetails) < 5 {
-		ctx.Send("Invalid format. Use: /add_ad title|description|price|city|category")
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can add ads.")
 		return nil
 	}
 
-	sellPrice, err := strconv.Atoi(adDetails[2])
+	input := ctx.Message().Payload
+	if input == "" {
+		ctx.Send("Please provide the ad information in the format: Title|Description|SellPrice|City|Neighborhood|Meters|NumberOfRooms|PhoneNumber.")
+		return nil
+	}
+
+	parts := strings.Split(input, "|")
+	if len(parts) < 8 {
+		ctx.Send("The entered information format is incorrect. Please try again.")
+		return nil
+	}
+
+	sellPrice, err := utils.ParseUint(parts[2])
 	if err != nil {
-		ctx.Send("Invalid price format.")
-		return err
+		ctx.Send("Invalid sell price format. Please enter a numeric value.")
+		return nil
+	}
+
+	meters, err := utils.ParseUint(parts[5])
+	if err != nil {
+		ctx.Send("Invalid meters value. Please enter a numeric value.")
+		return nil
+	}
+
+	numberOfRooms, err := utils.ParseUint(parts[6])
+	if err != nil {
+		ctx.Send("Invalid number of rooms. Please enter a numeric value.")
+		return nil
 	}
 
 	ad := models.Ads{
-		Description: adDetails[1],
-		SellPrice:   uint(sellPrice),
-		City:        adDetails[3],
-		Neighborhood: adDetails[4],
+		Title:             parts[0],
+		Description:       parts[1],
+		SellPrice:         sellPrice,
+		City:              parts[3],
+		Neighborhood:      parts[4],
+		Meters:            meters,
+		NumberOfRooms:     numberOfRooms,
+		SellerPhoneNumber: parts[7],
 	}
 
-	if err := database.DB.Create(&ad).Error; err != nil {
-		ctx.Send("Failed to add ad.")
-		return err
-	}
-
-	ctx.Send(fmt.Sprintf("Ad added successfully. Ad ID: %d", ad.AdID))
-	return nil
-}
-
-func (tg *Telegram) handleDeleteAd(ctx telebot.Context) error {
-	adID, err := strconv.Atoi(ctx.Text())
-	if err != nil {
-		ctx.Send("Invalid ad ID format.")
-		return err
-	}
-
-	if err := database.DB.Delete(&models.Ads{}, adID).Error; err != nil {
-		ctx.Send("Failed to delete ad.")
-		return err
-	}
-
-	ctx.Send("Ad deleted successfully.")
-	return nil
-}
-
-func (tg *Telegram) handleListAds(ctx telebot.Context) error {
-	var ads []models.Ads
-	if err := database.DB.Find(&ads).Error; err != nil {
-		ctx.Send("Failed to fetch ads.")
-		return err
-	}
-
-	if len(ads) == 0 {
-		ctx.Send("No ads found.")
+	if err := models.AddAd(database.DB, &ad); err != nil {
+		ctx.Send("Error adding the ad: " + err.Error())
 		return nil
 	}
 
-	response := "List of Ads:\n"
-	for _, ad := range ads {
-		response += fmt.Sprintf("ID: %d, Description: %s, Price: %d, City: %s\n", ad.AdID, ad.Description, ad.SellPrice, ad.City)
-	}
-	ctx.Send(response)
+	ctx.Send("The ad was added successfully!")
 	return nil
 }
 
-func (tg *Telegram) handleUpdateAd(ctx telebot.Context) error {
-	adDetails := strings.Split(ctx.Text(), "|")
-	if len(adDetails) < 6 {
-		ctx.Send("Invalid format. Use: /update_ad ad_id|description|price|city|neighborhood|category")
+func (tg *Telegram) handleEditAd(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can edit ads.")
 		return nil
 	}
 
-	adID, err := strconv.Atoi(adDetails[0])
-	if err != nil {
-		ctx.Send("Invalid ad ID format.")
-		return err
+	input := ctx.Message().Payload
+	if input == "" {
+		ctx.Send("Please provide the ad information in the format: AdID|NewTitle|NewDescription|NewSellPrice|City|Neighborhood|Meters|NumberOfRooms|PhoneNumber.")
+		return nil
 	}
 
-	sellPrice, err := strconv.Atoi(adDetails[2])
+	parts := strings.Split(input, "|")
+	if len(parts) < 9 {
+		ctx.Send("The entered information format is incorrect. Please try again.")
+		return nil
+	}
+
+	adID := utils.ParseUint(parts[0])
+	sellPrice, err := utils.ParseUint(parts[3])
 	if err != nil {
-		ctx.Send("Invalid price format.")
-		return err
+		ctx.Send("Invalid sell price format. Please enter a numeric value.")
+		return nil
+	}
+
+	meters, err := utils.ParseUint(parts[6])
+	if err != nil {
+		ctx.Send("Invalid meters value. Please enter a numeric value.")
+		return nil
+	}
+
+	numberOfRooms, err := utils.ParseUint(parts[7])
+	if err != nil {
+		ctx.Send("Invalid number of rooms. Please enter a numeric value.")
+		return nil
 	}
 
 	var ad models.Ads
 	if err := database.DB.First(&ad, adID).Error; err != nil {
-		ctx.Send("Ad not found.")
-		return err
+		ctx.Send("No ad found with this ID.")
+		return nil
 	}
 
-	ad.Description = adDetails[1]
-	ad.SellPrice = uint(sellPrice)
-	ad.City = adDetails[3]
-	ad.Neighborhood = adDetails[4]
+	ad.Title = parts[1]
+	ad.Description = parts[2]
+	ad.SellPrice = sellPrice
+	ad.City = parts[4]
+	ad.Neighborhood = parts[5]
+	ad.Meters = meters
+	ad.NumberOfRooms = numberOfRooms
+	ad.SellerPhoneNumber = parts[8]
 
-	if err := database.DB.Save(&ad).Error; err != nil {
-		ctx.Send("Failed to update ad.")
-		return err
+	if err := models.EditAd(database.DB, &ad); err != nil {
+		ctx.Send("Error editing the ad: " + err.Error())
+		return nil
 	}
 
-	ctx.Send("Ad updated successfully.")
+	ctx.Send("The ad was successfully edited!")
 	return nil
+}
+
+func (tg *Telegram) handleDeleteAd(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can delete ads.")
+		return nil
+	}
+
+	adID := utils.ParseUint(ctx.Message().Payload)
+	if adID == 0 {
+		ctx.Send("Please enter the ad ID.")
+		return nil
+	}
+
+	if err := models.DeleteAd(database.DB, adID); err != nil {
+		ctx.Send("Error deleting the ad: " + err.Error())
+		return nil
+	}
+
+	ctx.Send("The ad was successfully deleted!")
+	return nil
+}
+
+func (tg *Telegram) handleViewAds(ctx telebot.Context) error {
+	userID := uint(ctx.Sender().ID)
+	if !isSuperAdmin(userID) {
+		ctx.Send("Access denied. Only SuperAdmin can view all ads.")
+		return nil
+	}
+
+	ads, err := models.GetAds(database.DB, 0)
+	if err != nil || len(ads) == 0 {
+		ctx.Send("No ads are available to display.")
+		return nil
+	}
+
+	for _, ad := range ads {
+		msg := fmt.Sprintf(
+			"Ad ID: %d\nTitle: %s\nDescription: %s\nPrice: %d\nCity: %s\nNeighborhood: %s\nMeters: %d\nRooms: %d\nPhone: %s\nViews: %d",
+			ad.AdID, ad.Title, ad.Description, ad.SellPrice, ad.City, ad.Neighborhood, ad.Meters, ad.NumberOfRooms, ad.SellerPhoneNumber, ad.NumberOfViews)
+		ctx.Send(msg)
+	}
+
+	return nil
+}
+
+func (tg *Telegram) RegisterAdHandlers() {
+	tg.Bot.Handle("/add_ad", tg.handleAddAd)
+	tg.Bot.Handle("/edit_ad", tg.handleEditAd)
+	tg.Bot.Handle("/delete_ad", tg.handleDeleteAd)
+	tg.Bot.Handle("/view_ads", tg.handleViewAds)
 }
