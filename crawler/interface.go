@@ -41,14 +41,14 @@ func (c *CrawlerAbstract) Start() {
 
 	Ads = c.validateItems(Ads)
 	fmt.Println(len(Ads))
-	c.sendDataToDB(Ads)
+	// c.sendDataToDB(Ads)
 }
 
 func (c *CrawlerAbstract) iterateThroughAds(Ads []*Ads) {
 	defer c.Wg.Wait()
 
 	timeout := time.NewTimer(c.Settings.Timeout * time.Second)
-	log.Println(len(Ads))
+
 	for i := 0; i < len(Ads); i++ {
 
 		select {

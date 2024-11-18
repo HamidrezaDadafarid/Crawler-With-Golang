@@ -115,6 +115,35 @@ func getCities() (Cities, error) {
 
 }
 
+// These 2 functions should be merged later. they do the same job
+func getNeighbourhood(collector *rod.Page, sec string) string {
+
+	all, _ := getDistricts()
+	lst := all.Districts
+
+	for i := range lst {
+		if ok, _, _ := collector.HasR(sec, lst[i].Display); ok {
+			return lst[i].Display
+		}
+
+	}
+	return ""
+}
+
+func getCity(collector *rod.Page, sec string) string {
+
+	all, _ := getCities()
+	lst := all.Cities
+
+	for i := range lst {
+		if ok, _, _ := collector.HasR(sec, lst[i].Display); ok {
+			return lst[i].Display
+		}
+
+	}
+	return ""
+}
+
 // returns ticker , timeout, max
 func readConfig() (*Settings, error) {
 	file, err := os.ReadFile(`./config/config.json`)
@@ -126,6 +155,22 @@ func readConfig() (*Settings, error) {
 	var s Settings
 
 	json.Unmarshal(file, &s)
+
+	f, err := os.Create(`./config/config.json`)
+	if s.Page >= 180 {
+		s.Page = 0
+
+		d, _ := json.Marshal(s)
+		if err != nil {
+			return &Settings{}, err
+		}
+		f.Write(d)
+	} else {
+		s.Page += 1
+
+		d, _ := json.Marshal(s)
+		f.Write(d)
+	}
 
 	return &s, nil
 }

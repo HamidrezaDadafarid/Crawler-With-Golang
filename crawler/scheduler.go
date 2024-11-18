@@ -3,7 +3,6 @@ package crawler
 import (
 	"log"
 	"main/database"
-	"main/models"
 	"main/repository"
 	"os"
 	"os/signal"
@@ -11,14 +10,12 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
 )
 
 type rodinstance struct {
 }
 
-func StartCrawler(page int, d bool, s bool) {
+func StartCrawler() {
 	rodInstance := make(chan *rod.Browser, 1)
 	gormMetric := repository.NewGormUMetric(database.GetInstnace().Db)
 
@@ -46,75 +43,20 @@ func StartCrawler(page int, d bool, s bool) {
 		}()
 
 		for {
-
+			log.Println("STARTING CRAWLER")
 			settings, err := readConfig()
 
 			if err != nil {
 				log.Fatal("CRAWLER CONFIG ERROR")
 			}
 
-			if d {
-				finished := false
-				result := 0.0
-				memoryResult := 0.0
-				counter := 0
-				go func() {
-					for {
-						percent, _ := cpu.Percent(0, true)
-						v, _ := mem.VirtualMemory()
-						temp := 0.0
-						for _, item := range percent {
-							temp += item
-						}
-						memoryResult += v.UsedPercent
-						result += temp / float64(len(percent))
-						counter++
-						time.Sleep(time.Millisecond * 100)
-						if finished {
-							return
-						}
-					}
-				}()
-				metric := models.Metrics{}
-				divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
-				t := time.Now()
-				divarCrawler.Start()
-				metric.TimeSpent = time.Since(t).Seconds()
-				finished = true
-				metric.CpuUsage = result / float64(counter)
-				metric.RamUsage = memoryResult / float64(counter)
-				gormMetric.Add(metric)
-			}
+			divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
+			divarCrawler.Start()
 
-			if s {
-				finished := false
-				result := 0.0
-				counter := 0
-				go func() {
-					for {
-						percent, _ := cpu.Percent(0, true)
-						temp := 0.0
-						for _, item := range percent {
-							temp += item
-						}
-						result += temp / float64(len(percent))
-						counter++
-						time.Sleep(time.Millisecond * 100)
-						if finished {
-							return
-						}
-					}
-				}()
-				metric := models.Metrics{}
-				sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
-				t := time.Now()
-				sheypoorCrawler.Start()
-				metric.TimeSpent = time.Since(t).Seconds()
-				finished = true
-				metric.CpuUsage = result / float64(counter)
-				gormMetric.Add(metric)
-			}
+			sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings)
+			sheypoorCrawler.Start()
 
+			log.Println("CRAWLER ON SLEEP")
 			time.Sleep(settings.Ticker * time.Minute)
 		}
 	}
