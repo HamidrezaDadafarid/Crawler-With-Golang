@@ -35,7 +35,7 @@ func (tg *Telegram) handleAddAd(ctx telebot.Context) error {
 		return err
 	}
 
-	ctx.Send(fmt.Sprintf("Ad added successfully. Ad ID: %d", ad.AdID))
+	ctx.Send(fmt.Sprintf("Ad added successfully. Ad ID: %d", ad.ID))
 	return nil
 }
 
@@ -55,40 +55,20 @@ func (tg *Telegram) handleDeleteAd(ctx telebot.Context) error {
 	return nil
 }
 
-func (tg *Telegram) handleListAds(ctx telebot.Context) error {
-	var ads []models.Ads
-	if err := database.DB.Find(&ads).Error; err != nil {
-		ctx.Send("Failed to fetch ads.")
-		return err
-	}
-
-	if len(ads) == 0 {
-		ctx.Send("No ads found.")
-		return nil
-	}
-
-	response := "List of Ads:\n"
-	for _, ad := range ads {
-		response += fmt.Sprintf("ID: %d, Description: %s, Price: %d, City: %s\n", ad.AdID, ad.Description, ad.SellPrice, ad.City)
-	}
-	ctx.Send(response)
-	return nil
-}
-
-func (tg *Telegram) handleUpdateAd(ctx telebot.Context) error {
+func (tg *Telegram) handleEditAd(ctx telebot.Context) error {
 	adDetails := strings.Split(ctx.Text(), "|")
 	if len(adDetails) < 6 {
-		ctx.Send("Invalid format. Use: /update_ad ad_id|description|price|city|neighborhood|category")
+		ctx.Send("Invalid format. Use: /edit_ad AdID|title|description|price|city|category")
 		return nil
 	}
 
 	adID, err := strconv.Atoi(adDetails[0])
 	if err != nil {
-		ctx.Send("Invalid ad ID format.")
+		ctx.Send("Invalid AdID format.")
 		return err
 	}
 
-	sellPrice, err := strconv.Atoi(adDetails[2])
+	price, err := strconv.Atoi(adDetails[3])
 	if err != nil {
 		ctx.Send("Invalid price format.")
 		return err
@@ -100,16 +80,45 @@ func (tg *Telegram) handleUpdateAd(ctx telebot.Context) error {
 		return err
 	}
 
-	ad.Description = adDetails[1]
-	ad.SellPrice = uint(sellPrice)
-	ad.City = adDetails[3]
-	ad.Neighborhood = adDetails[4]
+	ad.Title = adDetails[1]
+	ad.Description = adDetails[2]
+	ad.SellPrice = uint(price)
+	ad.City = adDetails[4]
+	ad.Neighborhood = adDetails[5]
 
 	if err := database.DB.Save(&ad).Error; err != nil {
 		ctx.Send("Failed to update ad.")
 		return err
 	}
 
-	ctx.Send("Ad updated successfully.")
+	ctx.Send(fmt.Sprintf("Ad updated successfully. Ad ID: %d", ad.ID))
+	return nil
+}
+
+func (tg *Telegram) handleGetAds(ctx telebot.Context) error {
+	adIDText := ctx.Text()
+	var ads []models.Ads
+
+	if adIDText != "" {
+		adID, err := strconv.Atoi(adIDText)
+		if err != nil {
+			ctx.Send("Invalid AdID format.")
+			return err
+		}
+		if err := database.DB.Where("id = ?", adID).Find(&ads).Error; err != nil {
+			ctx.Send("Ad not found.")
+			return err
+		}
+	} else {
+		if err := database.DB.Find(&ads).Error; err != nil {
+			ctx.Send("Failed to retrieve ads.")
+			return err
+		}
+	}
+
+	for _, ad := range ads {
+		ctx.Send(fmt.Sprintf("Ad ID: %d\nTitle: %s\nDescription: %s\nPrice: %d\nCity: %s\nCategory: %s",
+			ad.ID, ad.Title, ad.Description, ad.SellPrice, ad.City, ad.Neighborhood))
+	}
 	return nil
 }
