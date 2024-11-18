@@ -7,7 +7,7 @@ type Metrics struct {
 	ID                  uint    `gorm:"primaryKey;autoIncrement"`
 	TimeSpent           float64 //second
 	CpuUsage            float64
-	RamUsage            uint
+	RamUsage            float64
 	RequestCount        uint
 	succeedRequestCount uint
 	FailRequestCount    uint

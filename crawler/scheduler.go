@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 )
 
 type rodinstance struct {
@@ -53,15 +54,40 @@ func StartCrawler(page int, d bool, s bool) {
 			}
 
 			if d {
+				finished := false
+				result := 0.0
+				memoryResult := 0.0
+				counter := 0
+				go func() {
+					for {
+						percent, _ := cpu.Percent(0, true)
+						v, _ := mem.VirtualMemory()
+						temp := 0.0
+						for _, item := range percent {
+							temp += item
+						}
+						memoryResult += v.UsedPercent
+						result += temp / float64(len(percent))
+						counter++
+						time.Sleep(time.Millisecond * 100)
+						if finished {
+							return
+						}
+					}
+				}()
 				metric := models.Metrics{}
 				divarCrawler := NewDivarCrawler(&waitGroup, rod, settings)
 				t := time.Now()
 				divarCrawler.Start()
 				metric.TimeSpent = time.Since(t).Seconds()
+				finished = true
+				metric.CpuUsage = result / float64(counter)
+				metric.RamUsage = memoryResult / float64(counter)
+				gormMetric.Add(metric)
 			}
 
 			if s {
-				percentChanel := make(chan bool, 1)
+				finished := false
 				result := 0.0
 				counter := 0
 				go func() {
@@ -74,8 +100,7 @@ func StartCrawler(page int, d bool, s bool) {
 						result += temp / float64(len(percent))
 						counter++
 						time.Sleep(time.Millisecond * 100)
-						select {
-						case <-percentChanel:
+						if finished {
 							return
 						}
 					}
@@ -85,9 +110,9 @@ func StartCrawler(page int, d bool, s bool) {
 				t := time.Now()
 				sheypoorCrawler.Start()
 				metric.TimeSpent = time.Since(t).Seconds()
-				percentChanel <- true
+				finished = true
 				metric.CpuUsage = result / float64(counter)
-
+				gormMetric.Add(metric)
 			}
 
 			time.Sleep(settings.Ticker * time.Minute)
