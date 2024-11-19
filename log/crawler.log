@@ -1,1 +1,39 @@
-INFO:2024/11/19 11:42:55 [DIVAR] fetching all targets...
+INFO:2024/11/19 11:56:20 [DIVAR] fetching all targets...
+INFO:2024/11/19 11:56:23 [DIVAR] fetched all targets
+INFO:2024/11/19 11:56:33 [DIVAR] successful advertisement /wZ7oEZVs
+INFO:2024/11/19 11:56:33 [DIVAR] successful advertisement /gZOvuoGg
+INFO:2024/11/19 11:56:34 [DIVAR] successful advertisement /wZ7MWv26
+INFO:2024/11/19 11:56:35 [DIVAR] successful advertisement /wZ8c02Km
+INFO:2024/11/19 11:56:38 [DIVAR] successful advertisement /gZ92a6sv
+INFO:2024/11/19 11:56:40 [DIVAR] successful advertisement /wZ6sj8To
+ERROR:2024/11/19 11:56:43 [DIVAR] failed to get advertisement /wZ8okl1t
+INFO:2024/11/19 11:56:44 [DIVAR] successful advertisement /wZ8oEovi
+INFO:2024/11/19 11:56:46 [DIVAR] successful advertisement /wZnYjHYn
+INFO:2024/11/19 11:56:48 [DIVAR] successful advertisement /QZd_nAcB
+ERROR:2024/11/19 11:56:49 [DIVAR] failed to get advertisement /gZ9rVLlX
+INFO:2024/11/19 11:56:50 [DIVAR] successful advertisement /wZ8oUdEH
+INFO:2024/11/19 11:56:53 [DIVAR] successful advertisement /gZ-_0ggy
+INFO:2024/11/19 11:56:57 [DIVAR] successful advertisement /gZzKjkqS
+INFO:2024/11/19 11:56:58 [DIVAR] successful advertisement /wZWIxXJK
+INFO:2024/11/19 11:57:01 [DIVAR] successful advertisement /wZ8o01KY
+INFO:2024/11/19 11:57:05 [DIVAR] successful advertisement /wZ8oEkZh
+INFO:2024/11/19 11:57:06 [DIVAR] successful advertisement /wZ8o0qmH
+INFO:2024/11/19 11:57:07 [DIVAR] successful advertisement /wZ5oLAb4
+INFO:2024/11/19 11:57:09 [DIVAR] successful advertisement /wZPE4bo0
+INFO:2024/11/19 11:57:10 [DIVAR] successful advertisement /gZyD3FBp
+INFO:2024/11/19 11:57:10 [DIVAR] successful advertisement /wZog4_ti
+INFO:2024/11/19 11:57:15 [DIVAR] successful advertisement /wZfglwZJ
+ERROR:2024/11/19 11:57:19 [DIVAR] failed to get advertisement /wZ8oE6_c
+INFO:2024/11/19 11:57:19 added or updated items in database
+INFO:2024/11/19 11:57:21 [SHEYPOOR] fetching all targets...
+INFO:2024/11/19 11:57:21 [SHEYPOOR] fetched all targets
+ERROR:2024/11/19 11:57:33 [SHEYPOOR] failed to get advertisement 442946104
+ERROR:2024/11/19 11:57:35 [SHEYPOOR] failed to get advertisement 445298768
+ERROR:2024/11/19 11:57:37 [SHEYPOOR] failed to get advertisement 445305793
+ERROR:2024/11/19 11:57:39 [SHEYPOOR] failed to get advertisement 439343950
+INFO:2024/11/19 11:57:41 [SHEYPOOR] successful advertisement 445100092
+ERROR:2024/11/19 11:57:41 [SHEYPOOR] failed to get advertisement 444774380
+INFO:2024/11/19 11:57:42 [SHEYPOOR] successful advertisement 445100345
+INFO:2024/11/19 11:57:43 [SHEYPOOR] successful advertisement 441712275
+INFO:2024/11/19 11:57:44 [SHEYPOOR] successful advertisement 444851100
+ERROR:2024/11/19 11:57:51 [SHEYPOOR] failed to get advertisement 445298574

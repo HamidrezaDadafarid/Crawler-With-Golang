@@ -655,7 +655,7 @@ func (t *Telegram) handleManageAdmins(c telebot.Context) (err error) {
 func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	session.State = "setting_crawl_time_limit"
-	err = c.Send("لطفا یک عدد به دقیقه برای تنظیم محدودیت زمانی فرایند جستجو کرالر وارد کنید")
+	err = c.Send("لطفا یک عدد به ثانیه برای تنظیم محدودیت زمانی فرایند جستجو کرالر وارد کنید")
 	return
 }
 
