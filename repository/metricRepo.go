@@ -11,6 +11,7 @@ type Metric interface {
 	Delete(id uint) error
 	DeleteAll() error
 	Get(ids []uint) ([]models.Metrics, error)
+	GetTopTen() ([]models.Metrics, error)
 }
 
 type gormMetric struct {
@@ -47,6 +48,12 @@ func (g *gormMetric) Get(ids []uint) ([]models.Metrics, error) {
 func (g *gormMetric) GetAll() ([]models.Metrics, error) {
 	var metrics []models.Metrics
 	result := g.Db.Find(&metrics)
+	return metrics, result.Error
+}
+
+func (g *gormMetric) GetTopTen() ([]models.Metrics, error) {
+	var metrics []models.Metrics
+	result := g.Db.Order("id desc").Limit(10).Find(&metrics)
 	return metrics, result.Error
 }
 
