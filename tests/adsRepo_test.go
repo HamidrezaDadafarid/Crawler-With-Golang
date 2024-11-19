@@ -12,7 +12,7 @@ func TestAdsRepo(t *testing.T) {
 	adRepo := repository.NewGormAd(dbManager.Db)
 	ad, err := adRepo.Add(models.Ads{
 		Link:          "divar link2",
-		UniqueId:      "id",
+		UniqueId:      "id9",
 		Longitude:     10,
 		Latitude:      11,
 		Description:   "some description",
@@ -37,7 +37,7 @@ func TestAdsRepo(t *testing.T) {
 	updateErr := adRepo.Update(models.Ads{
 		ID:            ad.ID,
 		Link:          "divar link",
-		UniqueId:      "id",
+		UniqueId:      "id10",
 		Longitude:     10,
 		Latitude:      11,
 		Description:   "some description updated",

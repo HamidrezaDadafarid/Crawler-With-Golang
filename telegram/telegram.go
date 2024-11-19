@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"main/csv"
 	"main/database"
-	"main/email"
 	logg "main/log"
 	"main/middlewares"
 	"main/models"
@@ -43,8 +41,7 @@ var (
 	btnManageAdmins      = superAdminMenu.Text("مدیریت کردن ادمین ها")
 	btnSetNumberOfAds    = superAdminMenu.Text("تنظیم تعداد آیتم های جستجو شده")
 	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
-	// اطلاعاتت تمامی کاربران به همراه اطلاعات کرال های انجام شده هر کاربر
-	// CRUD --> Ehsan
+	btnSetCrawlTicker    = superAdminMenu.Text("تنظیم زمان تکرار کرال")
 
 	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnSeeCrawlDetails = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
@@ -56,7 +53,6 @@ var (
 	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
 	btnDeleteHistory  = userMenu.Text("پاک کردن تاریخچه")
 	btnAddWatchList   = userMenu.Text("تنظیم کردن watch-list")
-	// watchList --> Hirad
 
 	watchListMenu = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnFilterID   = watchListMenu.Text("آیدی فیلتر مورد نظر")
@@ -190,6 +186,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 			superAdminMenu.Reply(
 				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
 				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+				superAdminMenu.Row(btnSetCrawlTicker),
 			)
 
 			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
@@ -443,19 +440,30 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
 		session := models.GetUserSession(c.Chat().ID)
+
 		gormFilter := repository.NewGormFilter(database.GetInstnace().Db)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		u, _ := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		gormUserAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
 
-		gormFilter.Add(session.Filters)
-		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", session.Filters.ID), userMenu)
+		addedFilter, e := gormFilter.Add(session.Filters)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("couldn't add filter", err)
 
-		// gormAd := repository.NewGormAd(database.GetInstnace().Db)
-		// ads, e := gormAd.Get(session.Filters)
-		// if e != nil {
-		// 	for _, ad := range ads {
+		}
+		gormAd := repository.NewGormAd(database.GetInstnace().Db)
+		ads, e := gormAd.Get(session.Filters)
+		if e == nil {
+			for _, ad := range ads {
+				gormUserAd.Add(models.Users_Ads{UserId: u.ID,
+					AdId: ad.ID})
 
-		// 		c.Send()
-		// 	}
-		// }
+			}
+		}
+		session.State = ""
+		t.Loggers.InfoLogger.Println("Saved filters..")
+		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", addedFilter.ID), filterMenu)
+
 	})
 
 	t.Bot.Handle(&btnBackFilterMenu, func(c telebot.Context) (err error) {
@@ -491,7 +499,7 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 
 	t.Bot.Handle(&btnGetAsZip, func(c telebot.Context) (err error) {
 		session.State = "sending_zip_file"
-		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+		filename, e := utils.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
 
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("exporting csv failed")
@@ -602,7 +610,32 @@ func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
 // -adminMenu handlers
 // TODO
 func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) (err error) {
-	return nil
+	session := models.GetUserSession(c.Chat().ID)
+	gm := repository.NewGormUMetric(database.GetInstnace().Db)
+	metricList, e := gm.GetTopFive()
+	if e != nil {
+		t.Loggers.ErrorLogger.Println("METRIC ERROR")
+	}
+
+	res := "مشخصات 5 کرال اخیر\n"
+
+	for i := range metricList {
+		met := metricList[i]
+		res += fmt.Sprintf(`
+		آیدی: %d
+		زمان صرف شده: %.2fs
+		CPU مصرف : %.2f%%
+		RAM مصرف : %.2f%%
+		تعداد درخواست ها: %d
+		درخواست های موفق: %d
+		درخواست های ناموفق: %d
+		---------`, met.ID, met.TimeSpent, met.CpuUsage, met.RamUsage, met.RequestCount, met.SucceedRequestCount, met.FailRequestCount)
+
+	}
+
+	err = c.Send(res)
+	session.State = ""
+	return
 }
 
 // superAdminMenu handlers
@@ -623,7 +656,7 @@ func (t *Telegram) handleManageAdmins(c telebot.Context) (err error) {
 func (t *Telegram) handleSetCrawlTimeLimit(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	session.State = "setting_crawl_time_limit"
-	err = c.Send("لطفا یک عدد به دقیقه برای تنظیم محدودیت زمانی فرایند جستجو کرالر وارد کنید")
+	err = c.Send("لطفا یک عدد به ثانیه برای تنظیم محدودیت زمانی فرایند جستجو کرالر وارد کنید")
 	return
 }
 
@@ -631,6 +664,12 @@ func (t *Telegram) handleSetNumberOfAds(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
 	session.State = "setting_max_searched_items"
 	err = c.Send("لطفا حداکثر تعداد آیتم های جستجو شده در هر کرال را وارد کنید")
+	return
+}
+func (t *Telegram) handleSetCrawlTicker(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "setting_crawl_ticker"
+	err = c.Send("لطفا زمان تکرار کرال را وارد کنید")
 	return
 }
 
@@ -660,6 +699,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
 			t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
 			t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+			t.Bot.Handle(&btnSetCrawlTicker, t.handleSetCrawlTicker)
 
 			err = c.Send("به ربات خزنده خوش آمدید :)", superAdminMenu)
 		}
@@ -678,8 +718,8 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "watchlist_time":
 		wlTime, e := strconv.Atoi(input)
-		if e != nil || wlTime <= 0 {
-			c.Send("زمان وارد شده نامعتبر است")
+		if e != nil || wlTime <= 5 {
+			c.Send("زمان وارد شده نامعتبر است! حداقل 5 دقیقه")
 			t.Loggers.InfoLogger.Println("Invalid time duration")
 			return
 		}
@@ -905,13 +945,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		session.Email = input
 
-		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+		filename, e := utils.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
 
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("exporting csv failed")
 		}
 
-		err = email.SendEmail(session.Email, filename)
+		err = utils.SendEmail(session.Email, filename)
 		if err != nil {
 			t.Loggers.ErrorLogger.Println("sending email failed")
 		}
@@ -924,6 +964,11 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "adding_bookmark":
 		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting user failed")
+		}
 		adId, e := strconv.Atoi(input)
 		if e != nil {
 			err = c.Send("آیدی آگهی نامعتبر است دوباره امتحان کنید")
@@ -931,7 +976,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			return
 		}
 		e = userAd.Update(models.Users_Ads{
-			UserId:     uint(session.ChatID),
+			UserId:     uint(user.ID),
 			AdId:       uint(adId),
 			IsBookmark: true,
 		})
@@ -955,19 +1000,42 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		}
 
 		userID := input
+		links := ""
 
-		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
-		ads, e := userAd.GetByUserId([]uint{uint(session.ChatID)})
+		gormUserAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		gormAd := repository.NewGormAd(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("finding user failed: ", e)
+
+		}
+		ads, e := gormUserAd.GetByUserId([]uint{user.ID})
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("getting user's ads failed: ", e)
 			return
 		}
-		links := ""
+		bookmarkedIDs := []uint{}
+
 		for _, ad := range ads {
 			if ad.IsBookmark {
-				links += fmt.Sprintf("%s\n", ad.Ad.Link)
+				bookmarkedIDs = append(bookmarkedIDs, ad.AdId)
 			}
 		}
+		bAds, e := gormAd.GetById(bookmarkedIDs)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting bookmarked ads failed: ", e)
+		}
+
+		for _, v := range bAds {
+			if v.Link == "divar" {
+				links += fmt.Sprintf("https://divar.ir/v%s\n", v.UniqueId)
+			} else {
+				links += fmt.Sprintf("https://sheypoor.com/v/%s\n", v.UniqueId)
+			}
+		}
+
+		links += "آگهی هایی که با شما به اشتراک گذاشته شده اند\n"
 		e = t.SendMessageToUser(userID, links)
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("sharing bookmarks failed: ", e)
@@ -1021,6 +1089,21 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		return
 
+	case "setting_crawl_ticker":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			err = c.Send("لطفا زمان مورد نظر خود را به دقیقه وارد کنید")
+			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
+			return
+		}
+
+		utils.SetCrawlerConfig("ticker", input)
+
+		err = c.Send(" زمان تکرار فرآیند جستجو آپدیت شد", superAdminMenu)
+		t.Loggers.InfoLogger.Println("crawl ticker updated")
+		session.State = ""
+
+		return
 	case "setting_crawl_time_limit":
 		re := regexp.MustCompile(`^[0-9]+$`)
 		if !re.MatchString(input) {
@@ -1028,12 +1111,9 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
 			return
 		}
-		e := os.Setenv("TIMEOUT", input)
-		if e != nil {
-			err = e
-			t.Loggers.ErrorLogger.Println("error in setting crawl time limit")
-			return
-		}
+
+		utils.SetCrawlerConfig("timeout", input)
+
 		err = c.Send("محدودیت زمان فرآیند جستجو آپدیت شد", superAdminMenu)
 		t.Loggers.InfoLogger.Println("crawl time limit updated")
 		session.State = ""
@@ -1046,12 +1126,9 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Loggers.InfoLogger.Println("invalid user input for max searched items in each crawl")
 			return
 		}
-		e := os.Setenv("MAX_SEARCHED_ITEMS", input)
-		if e != nil {
-			err = e
-			t.Loggers.ErrorLogger.Println("error in setting max searched items in each crawlW")
-			return
-		}
+
+		utils.SetCrawlerConfig("max_searched_items", input)
+
 		err = c.Send("تعداد آیتم های جستجو شده آپدیت شد", superAdminMenu)
 		t.Loggers.InfoLogger.Println("crawl max searched items updated")
 		session.State = ""

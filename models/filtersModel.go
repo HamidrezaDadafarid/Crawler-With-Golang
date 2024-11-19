@@ -8,7 +8,6 @@ import (
 
 type Filters struct {
 	gorm.Model
-	ID                 uint `gorm:"primaryKey;autoIncrement"`
 	NumberOfRequests   uint
 	StartPurchasePrice *uint
 	EndPurchasePrice   *uint

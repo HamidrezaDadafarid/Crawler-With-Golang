@@ -26,7 +26,7 @@ func TestUserAdsRepo(t *testing.T) {
 	randomLink := fmt.Sprintf("link %d", rand.Int())
 	ad, err := adsRepo.Add(models.Ads{
 		Link:          randomLink,
-		UniqueId:      "id",
+		UniqueId:      "id21",
 		Longitude:     10,
 		Latitude:      11,
 		Description:   "some description",

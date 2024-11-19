@@ -2,7 +2,7 @@ package crawler
 
 import (
 	"fmt"
-	"log"
+	logg "main/log"
 	"main/models"
 	"regexp"
 	"strconv"
@@ -20,21 +20,24 @@ const urlSheypoor = "https://www.sheypoor.com/s/iran/real-estate?page=%d"
 
 func NewSheypoorCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings, metric *models.Metrics) *CrawlerAbstract {
 	d := CrawlerAbstract{
-		Crawler:   &sheypoor{},
 		Wg:        wg,
 		Collector: col,
 		Settings:  s,
 		Metric:    metric,
 	}
+	d.Crawler = &sheypoor{
+		CrawlerAbstract: &d,
+	}
 	return &d
 }
 
-func (s *sheypoor) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
+func (s *sheypoor) GetTargets(page int, bInstance *rod.Browser, lg logg.CrawlerLogger) []*Advertisement {
 	var ads []*Advertisement
 
 	collector := bInstance.MustPage(fmt.Sprintf(urlSheypoor, page))
 
-	log.Println("GRABBING TARGETS | [SHEYPOOR]")
+	lg.InfoLogger.Println("[SHEYPOOR] fetching all targets...")
+
 	collector.Mouse.MustScroll(0, 300)
 	collector.MustWaitElementsMoreThan(`div.pt-4`, 8)
 
@@ -51,13 +54,13 @@ func (s *sheypoor) GetTargets(page int, bInstance *rod.Browser) []*Advertisement
 			}
 		}
 	}
-	log.Println("SUCCESS GRABBING [SHEYPOOR]")
+	lg.InfoLogger.Println("[SHEYPOOR] fetched all targets")
 	collector.Close()
 
 	return ads
 }
 
-func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
+func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup, lg logg.CrawlerLogger) {
 	defer wg.Done()
 	done := make(chan struct{})
 
@@ -107,7 +110,7 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 
 						switch key {
 						case `انباری`:
-							ad.Anbary = ok
+							ad.Storage = ok
 						case `آسانسور`:
 							ad.Elevator = ok
 						case `پارکینگ`:
@@ -150,20 +153,26 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 		numeric, err := strconv.Atoi(floorcleaned)
 
 		if err == nil {
-			ad.FloorNumber = numeric
+			ad.FloorNumber = uint(numeric)
 		}
 
 		ad.City = getCity(collector, `div._3oBho`)
-		ad.Mahale = getNeighbourhood(collector, `div._3oBho`)
+		ad.Neighborhood = getNeighbourhood(collector, `div._3oBho`)
+
+		pic := collector.MustElement(`img`).MustProperty(`src`).Str()
+
+		ad.PictureLink = pic
 
 	}()
 	select {
 	case <-time.After(time.Second * 10):
 		ad.CategoryAV = 2
-		log.Println("ERROR", ad.UniqueId)
+		lg.ErrorLogger.Printf("[SHEYPOOR] failed to get advertisement %s\n", ad.UniqueId)
+		s.Metric.FailRequestCount += 1
 		return
 	case <-done:
-		log.Println("finished job", ad.UniqueId)
+		lg.InfoLogger.Printf("[SHEYPOOR] successful advertisement %s\n", ad.UniqueId)
+		s.Metric.SucceedRequestCount += 1
 		return
 	}
 
