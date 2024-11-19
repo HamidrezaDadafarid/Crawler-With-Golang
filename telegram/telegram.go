@@ -443,23 +443,29 @@ func (t *Telegram) handleSetFilters(c telebot.Context) (err error) {
 
 	t.Bot.Handle(&btnSendFilter, func(c telebot.Context) (err error) {
 		session := models.GetUserSession(c.Chat().ID)
+
 		gormFilter := repository.NewGormFilter(database.GetInstnace().Db)
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
 		u, _ := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
 		gormUserAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
 
-		gormFilter.Add(session.Filters)
+		addedFilter, e := gormFilter.Add(session.Filters)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("couldn't add filter", err)
+
+		}
 		gormAd := repository.NewGormAd(database.GetInstnace().Db)
 		ads, e := gormAd.Get(session.Filters)
 		if e == nil {
 			for _, ad := range ads {
 				gormUserAd.Add(models.Users_Ads{UserId: u.ID,
 					AdId: ad.ID})
-				t.Loggers.ErrorLogger.Println(ad)
+
 			}
 		}
-
-		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", session.Filters.ID), userMenu)
+		session.State = ""
+		t.Loggers.InfoLogger.Println("Saved filters..")
+		return c.Send(fmt.Sprintf("فیلتر شما با موفیقت ثبت شد. آیدی فیلتر شما %d می باشد", addedFilter.ID), filterMenu)
 
 	})
 
@@ -929,6 +935,8 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 	case "adding_bookmark":
 		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
 		adId, e := strconv.Atoi(input)
 		if e != nil {
 			err = c.Send("آیدی آگهی نامعتبر است دوباره امتحان کنید")
@@ -936,7 +944,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			return
 		}
 		e = userAd.Update(models.Users_Ads{
-			UserId:     uint(session.ChatID),
+			UserId:     uint(user.ID),
 			AdId:       uint(adId),
 			IsBookmark: true,
 		})
@@ -961,18 +969,25 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 		userID := input
 
-		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
-		ads, e := userAd.GetByUserId([]uint{uint(session.ChatID)})
+		gormUserAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
+		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		user, e := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("finding user failed: ", e)
+		}
+		ads, e := gormUserAd.GetByUserId([]uint{user.ID})
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("getting user's ads failed: ", e)
 			return
 		}
+
 		links := ""
 		for _, ad := range ads {
 			if ad.IsBookmark {
-				links += fmt.Sprintf("%s\n", ad.Ad.Link)
+				links += fmt.Sprintf("%s\n", ad.Ad.UniqueId)
 			}
 		}
+		t.Loggers.InfoLogger.Println(links)
 		e = t.SendMessageToUser(userID, links)
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("sharing bookmarks failed: ", e)
