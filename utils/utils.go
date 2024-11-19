@@ -74,11 +74,12 @@ func SetCrawlerConfig(key string, val string) {
 	switch key {
 	case "timeout":
 		s.Timeout = time.Duration(conft)
-	case "max_searched_items" :
+	case "max_searched_items":
 		s.Items = uint(conft)
+	case "ticker":
+		s.Ticker = time.Duration(conft)
 	}
 
-	
 	d, _ := json.Marshal(s)
 
 	f, _ := os.Create(`./config/config.json`)

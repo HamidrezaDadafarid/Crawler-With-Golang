@@ -1068,9 +1068,6 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		return
 
-	case "setting_crawl_ticker":
-		session.State = ""
-
 	case "managing_admin":
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
 		user, e := gormUser.GetByTelegramId(lowerInput)
@@ -1091,6 +1088,21 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		return
 
+	case "setting_crawl_ticker":
+		re := regexp.MustCompile(`^[0-9]+$`)
+		if !re.MatchString(input) {
+			err = c.Send("لطفا زمان مورد نظر خود را به دقیقه وارد کنید")
+			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
+			return
+		}
+
+		utils.SetCrawlerConfig("ticker", input)
+
+		err = c.Send(" زمان تکرار فرآیند جستجو آپدیت شد", superAdminMenu)
+		t.Loggers.InfoLogger.Println("crawl ticker updated")
+		session.State = ""
+
+		return
 	case "setting_crawl_time_limit":
 		re := regexp.MustCompile(`^[0-9]+$`)
 		if !re.MatchString(input) {
