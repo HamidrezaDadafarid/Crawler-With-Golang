@@ -1068,12 +1068,6 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 
 		utils.SetCrawlerConfig("timeout", input)
 
-		e := os.Setenv("TIMEOUT", input)
-		if e != nil {
-			err = e
-			t.Loggers.ErrorLogger.Println("error in setting crawl time limit")
-			return
-		}
 		err = c.Send("محدودیت زمان فرآیند جستجو آپدیت شد", superAdminMenu)
 		t.Loggers.InfoLogger.Println("crawl time limit updated")
 		session.State = ""
@@ -1086,12 +1080,9 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Loggers.InfoLogger.Println("invalid user input for max searched items in each crawl")
 			return
 		}
-		e := os.Setenv("MAX_SEARCHED_ITEMS", input)
-		if e != nil {
-			err = e
-			t.Loggers.ErrorLogger.Println("error in setting max searched items in each crawlW")
-			return
-		}
+
+		utils.SetCrawlerConfig("max_searched_items", input)
+
 		err = c.Send("تعداد آیتم های جستجو شده آپدیت شد", superAdminMenu)
 		t.Loggers.InfoLogger.Println("crawl max searched items updated")
 		session.State = ""
