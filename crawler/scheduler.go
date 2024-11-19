@@ -1,13 +1,12 @@
 package crawler
 
 import (
-	"fmt"
 	"log"
 	"main/database"
+	logg "main/log"
 	"main/models"
 	"main/repository"
 	"os"
-	"os/signal"
 	"sync"
 	"time"
 
@@ -23,6 +22,20 @@ func StartCrawler() {
 	rodInstance := make(chan *rod.Browser, 1)
 	gormMetric := repository.NewGormUMetric(database.GetInstnace().Db)
 
+	logFile, err := os.Create(`./log/crawler.log`)
+
+	if err != nil {
+		log.Fatal(`ERORR: CRAWLER LOGGER CREATION`, err)
+	}
+
+	infoLogger := log.New(logFile, "INFO:", log.LstdFlags)
+	errorLogger := log.New(logFile, "ERROR:", log.LstdFlags)
+
+	crawlerLogger := logg.CrawlerLogger{
+		InfoLogger:  infoLogger,
+		ErrorLogger: errorLogger,
+	}
+
 	var (
 		waitGroup sync.WaitGroup
 	)
@@ -36,23 +49,15 @@ func StartCrawler() {
 		log.Println("TIMEOUT WHEN STARTING CRAWLER")
 	case rod := <-rodInstance:
 
-		go func() {
-			sigchan := make(chan os.Signal, 1)
-			signal.Notify(sigchan, os.Interrupt)
-			<-sigchan
-
-			log.Println("MANUAL INTERRUPTION / PROGRAM DEATH")
-			rod.MustClose()
-			os.Exit(0)
-		}()
-
 		for {
 			log.Println("STARTING CRAWLER")
 			settings, err := readConfig()
 
 			if err != nil {
-				log.Fatal("CRAWLER CONFIG ERROR")
+				log.Fatal("ERROR: CRAWLER CONFIG")
 			}
+
+			settings.Logger = crawlerLogger
 
 			finished := false
 			result := 0.0
@@ -112,11 +117,11 @@ func StartCrawler() {
 			metric.CpuUsage = result / float64(counter)
 			gormMetric.Add(metric)
 
-			log.Println("CRAWLER ON SLEEP")
+			settings.Logger.InfoLogger.Printf("Crawler sleeping for %d minutes\n", settings.Ticker)
 
 			if 22 <= time.Now().Hour() {
 
-				fmt.Println("NIGGER NIGGER NIGGER NIGGER")
+				settings.Logger.InfoLogger.Println("Overnight crawler started...")
 
 				gAd := repository.NewGormAd(database.GetInstnace().Db)
 
@@ -124,13 +129,13 @@ func StartCrawler() {
 				for i := 0; i < len(ads); i += 2 {
 					if ads[i].Link == "divar" {
 						waitGroup.Add(2)
-						go divarCrawler.Crawler.GetDetails(&ads[i], rod, &waitGroup)
-						go divarCrawler.Crawler.GetDetails(&ads[i+1], rod, &waitGroup)
+						go divarCrawler.Crawler.GetDetails(&ads[i], rod, &waitGroup, settings.Logger)
+						go divarCrawler.Crawler.GetDetails(&ads[i+1], rod, &waitGroup, settings.Logger)
 
 					} else {
 						waitGroup.Add(2)
-						go sheypoorCrawler.Crawler.GetDetails(&ads[i], rod, &waitGroup)
-						go sheypoorCrawler.Crawler.GetDetails(&ads[i+1], rod, &waitGroup)
+						go sheypoorCrawler.Crawler.GetDetails(&ads[i], rod, &waitGroup, settings.Logger)
+						go sheypoorCrawler.Crawler.GetDetails(&ads[i+1], rod, &waitGroup, settings.Logger)
 					}
 					waitGroup.Wait()
 					gAd.Update(ads[i])
@@ -139,6 +144,7 @@ func StartCrawler() {
 					time.Sleep(900 * time.Millisecond)
 				}
 
+				settings.Logger.InfoLogger.Println("Overnight crawler finished!")
 				time.Sleep(1 * time.Hour)
 
 			} else {

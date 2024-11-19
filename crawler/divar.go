@@ -2,7 +2,7 @@ package crawler
 
 import (
 	"fmt"
-	"log"
+	logg "main/log"
 	"main/models"
 	"regexp"
 	"strings"
@@ -39,11 +39,11 @@ func getUniqueID(a string) string {
 }
 
 // Grabs all targets needed to scrape.
-func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
+func (d *divar) GetTargets(page int, bInstance *rod.Browser, lg logg.CrawlerLogger) []*Advertisement {
 
 	visit := fmt.Sprintf(urlDivar, page)
 
-	log.Println("GRABBING TARGETS | [DIVAR]:", visit)
+	lg.InfoLogger.Println("[DIVAR] fetching all targets...")
 
 	var Ads []*Advertisement
 
@@ -60,11 +60,11 @@ func (d *divar) GetTargets(page int, bInstance *rod.Browser) []*Advertisement {
 		Ads = append(Ads, ad)
 	}
 
-	log.Println("SUCCESS FOR GRABBING")
+	lg.InfoLogger.Println("[DIVAR] fetched all targets")
 	return Ads
 }
 
-func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup) {
+func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.WaitGroup, lg logg.CrawlerLogger) {
 
 	defer wg.Done()
 
@@ -159,12 +159,10 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	select {
 	case <-time.After(time.Second * 10):
 		ad.CategoryAV = 2
-		log.Println("ERROR", ad.UniqueId)
-		// d.Metric.FailRequestCount++
+		lg.ErrorLogger.Printf("[DIVAR] failed to get advertisement %s\n", ad.UniqueId)
 		return
 	case <-done:
-		// d.Metric.SucceedRequestCount++
-		log.Println("finished job", ad.UniqueId)
+		lg.InfoLogger.Printf("[DIVAR] successful advertisement %s\n", ad.UniqueId)
 		return
 	}
 }
