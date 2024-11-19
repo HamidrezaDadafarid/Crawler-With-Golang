@@ -611,7 +611,32 @@ func (t *Telegram) handleBookmarkAd(c telebot.Context) (err error) {
 // -adminMenu handlers
 // TODO
 func (t *Telegram) handleSeeCrawlDetails(c telebot.Context) (err error) {
-	return nil
+	session := models.GetUserSession(c.Chat().ID)
+	gm := repository.NewGormUMetric(database.GetInstnace().Db)
+	metricList, e := gm.GetTopFive()
+	if e != nil {
+		t.Loggers.ErrorLogger.Println("METRIC ERROR")
+	}
+
+	res := "مشخصات 5 کرال اخیر\n"
+
+	for i := range metricList {
+		met := metricList[i]
+		res += fmt.Sprintf(`
+		آیدی: %d
+		زمان صرف شده: %.2fs
+		CPU مصرف : %.2f%%
+		RAM مصرف : %.2f%%
+		تعداد درخواست ها: %d
+		درخواست های موفق: %d
+		درخواست های ناموفق: %d
+		---------`, met.ID, met.TimeSpent, met.CpuUsage, met.RamUsage, met.RequestCount, met.SucceedRequestCount, met.FailRequestCount)
+
+	}
+
+	err = c.Send(res)
+	session.State = ""
+	return
 }
 
 // superAdminMenu handlers
