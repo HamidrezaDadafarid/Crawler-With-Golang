@@ -41,8 +41,7 @@ var (
 	btnManageAdmins      = superAdminMenu.Text("مدیریت کردن ادمین ها")
 	btnSetNumberOfAds    = superAdminMenu.Text("تنظیم تعداد آیتم های جستجو شده")
 	btnSetCrawlTimeLimit = superAdminMenu.Text("تنظیم محدودیت زمانی فرآیند جستجو")
-	// اطلاعاتت تمامی کاربران به همراه اطلاعات کرال های انجام شده هر کاربر
-	// CRUD --> Ehsan
+	btnSetCrawlTicker    = superAdminMenu.Text("تنظیم زمان تکرار کرال")
 
 	adminMenu          = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnSeeCrawlDetails = superAdminMenu.Text("دیدن اطلاعات کرال های انجام شده")
@@ -54,7 +53,6 @@ var (
 	btnGetOutputFile  = userMenu.Text("خروجی گرفتن از آگهی ها")
 	btnDeleteHistory  = userMenu.Text("پاک کردن تاریخچه")
 	btnAddWatchList   = userMenu.Text("تنظیم کردن watch-list")
-	// watchList --> Hirad
 
 	watchListMenu = &telebot.ReplyMarkup{ResizeKeyboard: true}
 	btnFilterID   = watchListMenu.Text("آیدی فیلتر مورد نظر")
@@ -187,7 +185,7 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 		} else {
 			superAdminMenu.Reply(
 				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
-				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds, btnSetCrawlTicker),
 			)
 
 			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
@@ -667,6 +665,12 @@ func (t *Telegram) handleSetNumberOfAds(c telebot.Context) (err error) {
 	err = c.Send("لطفا حداکثر تعداد آیتم های جستجو شده در هر کرال را وارد کنید")
 	return
 }
+func (t *Telegram) handleSetCrawlTicker(c telebot.Context) (err error) {
+	session := models.GetUserSession(c.Chat().ID)
+	session.State = "setting_crawl_ticker"
+	err = c.Send("لطفا زمان تکرار کرال را وارد کنید")
+	return
+}
 
 func (t *Telegram) handleText(c telebot.Context) (err error) {
 	session := models.GetUserSession(c.Chat().ID)
@@ -694,6 +698,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Bot.Handle(&btnManageAdmins, t.handleManageAdmins)
 			t.Bot.Handle(&btnSetCrawlTimeLimit, t.handleSetCrawlTimeLimit)
 			t.Bot.Handle(&btnSetNumberOfAds, t.handleSetNumberOfAds)
+			t.Bot.Handle(&btnSetCrawlTicker, t.handleSetCrawlTicker)
 
 			err = c.Send("به ربات خزنده خوش آمدید :)", superAdminMenu)
 		}
@@ -1062,6 +1067,9 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		t.Loggers.InfoLogger.Println("user's role changed to admin")
 		session.State = ""
 		return
+
+	case "setting_crawl_ticker":
+		session.State = ""
 
 	case "managing_admin":
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
