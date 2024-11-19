@@ -185,7 +185,8 @@ func (t *Telegram) handleStart(c telebot.Context) (err error) {
 		} else {
 			superAdminMenu.Reply(
 				superAdminMenu.Row(btnAddAdmin, btnManageAdmins),
-				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds, btnSetCrawlTicker),
+				superAdminMenu.Row(btnSetCrawlTimeLimit, btnSetNumberOfAds),
+				superAdminMenu.Row(btnSetCrawlTicker),
 			)
 
 			t.Bot.Handle(&btnAddAdmin, t.handleAddAdmin)
