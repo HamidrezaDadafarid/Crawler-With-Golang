@@ -36,7 +36,7 @@ func (g *gormAd) Delete(id uint) error {
 
 func (g *gormAd) Get(filter models.Filters) ([]models.Ads, error) {
 	var ads []models.Ads
-	result := g.Db.Where("sell_price BETWEEN ? AND ? OR rent_price BETWEEN ? AND ? OR mortage_price BETWEEN ? AND ? OR city LIKE ? OR neighborhood LIKE ? OR number_of_rooms BETWEEN ? AND ? OR category_av = ? OR category_pr = ? OR age BETWEEN ? AND ? OR floor_number BETWEEN ? AND ? OR storage = ? OR elevator = ?", filter.StartPurchasePrice, filter.EndPurchasePrice, filter.StartRentPrice, filter.EndRentPrice, filter.StartMortgagePrice, filter.EndMortgagePrice, filter.City, filter.Neighborhood, filter.StartNumberOfRooms, filter.EndNumberOfRooms, filter.CategoryAV, filter.CategoryPR, filter.StartAge, filter.EndAge, filter.StartFloorNumber, filter.EndFloorNumber, filter.Storage, filter.Elevator).Find(&ads)
+	result := g.Db.Where("sell_price BETWEEN ? AND ? OR rent_price BETWEEN ? AND ? OR mortgage_price BETWEEN ? AND ? OR city LIKE ? OR neighborhood LIKE ? OR number_of_rooms BETWEEN ? AND ? OR category_av = ? OR category_pr = ? OR age BETWEEN ? AND ? OR floor_number BETWEEN ? AND ? OR storage = ? OR elevator = ?", filter.StartPurchasePrice, filter.EndPurchasePrice, filter.StartRentPrice, filter.EndRentPrice, filter.StartMortgagePrice, filter.EndMortgagePrice, filter.City, filter.Neighborhood, filter.StartNumberOfRooms, filter.EndNumberOfRooms, filter.CategoryAV, filter.CategoryPR, filter.StartAge, filter.EndAge, filter.StartFloorNumber, filter.EndFloorNumber, filter.Storage, filter.Elevator).Find(&ads)
 	return ads, result.Error
 }
 

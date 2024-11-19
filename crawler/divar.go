@@ -22,12 +22,13 @@ type divar struct {
 
 func NewDivarCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings, metric *models.Metrics) *CrawlerAbstract {
 	d := CrawlerAbstract{
-		Crawler:   &divar{},
 		Wg:        wg,
 		Collector: col,
 		Settings:  s,
 		Metric:    metric,
 	}
+
+	d.Crawler = &divar{CrawlerAbstract: &d}
 	return &d
 }
 
@@ -159,9 +160,11 @@ func (d *divar) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *sync.W
 	select {
 	case <-time.After(time.Second * 10):
 		ad.CategoryAV = 2
+		d.Metric.FailRequestCount += 1
 		lg.ErrorLogger.Printf("[DIVAR] failed to get advertisement %s\n", ad.UniqueId)
 		return
 	case <-done:
+		d.Metric.SucceedRequestCount += 1
 		lg.InfoLogger.Printf("[DIVAR] successful advertisement %s\n", ad.UniqueId)
 		return
 	}

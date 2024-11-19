@@ -20,11 +20,13 @@ const urlSheypoor = "https://www.sheypoor.com/s/iran/real-estate?page=%d"
 
 func NewSheypoorCrawler(wg *sync.WaitGroup, col *rod.Browser, s *Settings, metric *models.Metrics) *CrawlerAbstract {
 	d := CrawlerAbstract{
-		Crawler:   &sheypoor{},
 		Wg:        wg,
 		Collector: col,
 		Settings:  s,
 		Metric:    metric,
+	}
+	d.Crawler = &sheypoor{
+		CrawlerAbstract: &d,
 	}
 	return &d
 }
@@ -166,9 +168,11 @@ func (s *sheypoor) GetDetails(ad *Advertisement, bInstance *rod.Browser, wg *syn
 	case <-time.After(time.Second * 10):
 		ad.CategoryAV = 2
 		lg.ErrorLogger.Printf("[SHEYPOOR] failed to get advertisement %s\n", ad.UniqueId)
+		s.Metric.FailRequestCount += 1
 		return
 	case <-done:
 		lg.InfoLogger.Printf("[SHEYPOOR] successful advertisement %s\n", ad.UniqueId)
+		s.Metric.SucceedRequestCount += 1
 		return
 	}
 

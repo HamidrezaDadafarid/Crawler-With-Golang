@@ -108,14 +108,14 @@ func StartCrawler() {
 					}
 				}
 			}()
-			metric = models.Metrics{}
-			sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings, &metric)
+			metricSh := models.Metrics{}
+			sheypoorCrawler := NewSheypoorCrawler(&waitGroup, *&rod, settings, &metricSh)
 			t = time.Now()
 			sheypoorCrawler.Start()
-			metric.TimeSpent = time.Since(t).Seconds()
+			metricSh.TimeSpent = time.Since(t).Seconds()
 			finished = true
-			metric.CpuUsage = result / float64(counter)
-			gormMetric.Add(metric)
+			metricSh.CpuUsage = result / float64(counter)
+			gormMetric.Add(metricSh)
 
 			settings.Logger.InfoLogger.Printf("Crawler sleeping for %d minutes\n", settings.Ticker)
 

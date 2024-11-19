@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	crawler "main/crawler"
+	"main/crawler"
 	"main/database"
 	"main/models"
 	"main/telegram"
@@ -17,7 +17,7 @@ import (
 
 func main() {
 	dbManager := database.GetInstnace()
-	dbManager.Db.AutoMigrate(&models.Ads{}, &models.Filters{}, &models.Users{}, &models.Users_Ads{}, &models.WatchList{})
+	dbManager.Db.AutoMigrate(&models.Ads{}, &models.Filters{}, &models.Users{}, &models.Users_Ads{}, &models.WatchList{}, &models.Metrics{})
 
 	err := godotenv.Load()
 	if err != nil {
