@@ -51,7 +51,7 @@ func StartCrawler() {
 
 		for {
 			log.Println("STARTING CRAWLER")
-			settings, err := readConfig()
+			settings, err := ReadConfig()
 
 			if err != nil {
 				log.Fatal("ERROR: CRAWLER CONFIG")

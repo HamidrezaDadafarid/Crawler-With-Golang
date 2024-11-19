@@ -143,7 +143,7 @@ func getCity(collector *rod.Page, sec string) string {
 }
 
 // returns ticker , timeout, max
-func readConfig() (*Settings, error) {
+func ReadConfig() (*Settings, error) {
 	file, err := os.ReadFile(`./config/config.json`)
 
 	if err != nil {

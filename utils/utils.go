@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"main/crawler"
 	"os"
 	"strconv"
 	"strings"
@@ -60,4 +62,22 @@ func GetEnvVariable(key string) (string, error) {
 	}
 
 	return os.Getenv(key), nil
+}
+
+func SetCrawlerConfig(key string, val string) {
+	var s *crawler.Settings
+
+	s, _ = crawler.ReadConfig()
+
+	conft, _ := strconv.Atoi(val)
+
+	switch key {
+	case "timeout":
+		s.Timeout = time.Duration(conft)
+	}
+	d, _ := json.Marshal(s)
+
+	f, _ := os.Create(`./config/config.json`)
+
+	f.Write(d)
 }

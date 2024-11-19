@@ -2,6 +2,7 @@ package tests
 
 import (
 	"main/crawler"
+	logg "main/log"
 	"main/models"
 	"sync"
 	"testing"
@@ -32,7 +33,7 @@ func (suite *DivarTestSuite) TearDownTest() {
 
 // TestGetTargets tests the GetTargets method
 func (suite *DivarTestSuite) TestGetTargets() {
-	ads := suite.divar.Crawler.GetTargets(suite.divar.Settings.Page, suite.browser)
+	ads := suite.divar.Crawler.GetTargets(suite.divar.Settings.Page, suite.browser, logg.CrawlerLogger{})
 	suite.NotEmpty(ads)
 	for _, ad := range ads {
 		suite.NotEmpty(ad.UniqueId)
@@ -47,7 +48,7 @@ func (suite *DivarTestSuite) TestGetDetails() {
 		Link:     "divar",
 	}
 	suite.waitGroup.Add(1)
-	suite.divar.Crawler.GetDetails(ad, suite.browser, suite.waitGroup)
+	suite.divar.Crawler.GetDetails(ad, suite.browser, suite.waitGroup, logg.CrawlerLogger{})
 	suite.Equal(`۵۳متر*پارکینگ*غرق نور*وام دار/فاز ۱`, ad.Title)
 	suite.Equal(uint(1), ad.CategoryAV)
 	suite.Empty(ad.City)

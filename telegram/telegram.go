@@ -995,7 +995,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("getting bookmarked ads failed: ", e)
 		}
-		
+
 		for _, v := range bAds {
 			if v.Link == "divar" {
 				links += fmt.Sprintf("https://divar.ir/v%s\n", v.UniqueId)
@@ -1065,6 +1065,8 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
 			return
 		}
+
+		utils.SetCrawlerConfig("timeout", input)
 
 		e := os.Setenv("TIMEOUT", input)
 		if e != nil {
