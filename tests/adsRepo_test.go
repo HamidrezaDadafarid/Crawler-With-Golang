@@ -35,7 +35,6 @@ func TestAdsRepo(t *testing.T) {
 	}
 
 	updateErr := adRepo.Update(models.Ads{
-		ID:            ad.ID,
 		Link:          "divar link",
 		UniqueId:      "id",
 		Longitude:     10,

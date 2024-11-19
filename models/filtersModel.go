@@ -8,7 +8,6 @@ import (
 
 type Filters struct {
 	gorm.Model
-
 	NumberOfRequests   uint
 	StartPurchasePrice *uint
 	EndPurchasePrice   *uint

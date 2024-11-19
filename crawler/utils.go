@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -57,7 +56,6 @@ func GetLatitudeAndLongitude(a string) (float64, float64) {
 	long, errlong := strconv.ParseFloat(result[1], 64)
 
 	if errlat != nil || errlong != nil {
-		log.Println(`FAILED TO CONVERT TO LATITUDE OR LONGTITUDE\nLINK:` + a)
 		return -1, -1
 	}
 	return lat, long

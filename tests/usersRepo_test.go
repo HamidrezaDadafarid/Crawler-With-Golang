@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"main/database"
 	"main/models"
 	"main/repository"
@@ -16,6 +17,7 @@ func TestUsersRepo(t *testing.T) {
 		Role:       "User",
 	})
 	if err != nil {
+		fmt.Println(err)
 		t.Error("failed to add user")
 	}
 

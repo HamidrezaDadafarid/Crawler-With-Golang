@@ -2,10 +2,9 @@ package repository
 
 import (
 	"main/models"
+
 	"gorm.io/gorm"
 )
-
-
 
 type Ad interface {
 	Add(ad models.Ads) (models.Ads, error)

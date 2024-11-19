@@ -1,9 +1,8 @@
 package crawler
 
 import (
-	"fmt"
-	"log"
 	"main/database"
+	logg "main/log"
 	"main/models"
 	"main/repository"
 	"sync"
@@ -15,8 +14,8 @@ import (
 type Ads = models.Ads
 
 type Crawler interface {
-	GetTargets(page int, collector *rod.Browser) []*Ads
-	GetDetails(*Ads, *rod.Browser, *sync.WaitGroup)
+	GetTargets(int, *rod.Browser, logg.CrawlerLogger) []*Ads
+	GetDetails(*Ads, *rod.Browser, *sync.WaitGroup, logg.CrawlerLogger)
 }
 
 type CrawlerAbstract struct {
@@ -32,18 +31,20 @@ type Settings struct {
 	Page    int           `json:"PAGE"`
 	Timeout time.Duration `json:"CRAWLER_TIMEOUT"`
 	Ticker  time.Duration `json:"CRAWLER_TICKER"`
+	Logger  logg.CrawlerLogger
 }
 
 func (c *CrawlerAbstract) Start() {
 
-	Ads := c.Crawler.GetTargets(c.Settings.Page, c.Collector)
+	Ads := c.Crawler.GetTargets(c.Settings.Page, c.Collector, c.Settings.Logger)
 	c.Metric.RequestCount = len(Ads) + 1
 	c.Metric.SucceedRequestCount++
 	c.iterateThroughAds(Ads)
 
 	Ads = c.validateItems(Ads)
-	fmt.Println(len(Ads))
 	c.sendDataToDB(Ads)
+
+	c.Settings.Logger.InfoLogger.Println("added or updated items in database")
 }
 
 func (c *CrawlerAbstract) iterateThroughAds(Ads []*Ads) {
@@ -55,11 +56,11 @@ func (c *CrawlerAbstract) iterateThroughAds(Ads []*Ads) {
 
 		select {
 		case <-timeout.C:
-			log.Println("crawler timeout [SHEYPOOR]")
+			c.Settings.Logger.ErrorLogger.Println("CRAWL TIMEOUT REACHED")
 			return
 		case <-time.After(time.Millisecond * 2000):
 			c.Wg.Add(1)
-			go c.Crawler.GetDetails(Ads[i], c.Collector, c.Wg)
+			go c.Crawler.GetDetails(Ads[i], c.Collector, c.Wg, c.Settings.Logger)
 
 		}
 

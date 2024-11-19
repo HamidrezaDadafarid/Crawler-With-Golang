@@ -23,5 +23,6 @@ go.work.sum
 
 # env file
 .env
-crawler/temp_db_json.go
 
+
+./config/config.json
