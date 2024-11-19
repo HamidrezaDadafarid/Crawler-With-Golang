@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"main/csv"
+
 	"main/database"
-	"main/email"
 	logg "main/log"
 	"main/middlewares"
 	"main/models"
@@ -496,7 +495,7 @@ func (t *Telegram) handleGetOutput(c telebot.Context) error {
 
 	t.Bot.Handle(&btnGetAsZip, func(c telebot.Context) (err error) {
 		session.State = "sending_zip_file"
-		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+		filename, e := utils.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
 
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("exporting csv failed")
@@ -910,13 +909,13 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		session.State = ""
 		session.Email = input
 
-		filename, e := csv.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
+		filename, e := utils.ExportCsv(strconv.Itoa(int(session.ChatID)), database.GetInstnace().Db)
 
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("exporting csv failed")
 		}
 
-		err = email.SendEmail(session.Email, filename)
+		err = utils.SendEmail(session.Email, filename)
 		if err != nil {
 			t.Loggers.ErrorLogger.Println("sending email failed")
 		}
