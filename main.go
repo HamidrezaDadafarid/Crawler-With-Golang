@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	crawler "main/crawler"
 	"main/database"
 	"main/models"
+	"main/telegram"
 	"os"
 	"os/signal"
 	"time"
-
-	crawler "main/crawler"
 
 	"github.com/joho/godotenv"
 )
@@ -24,16 +24,16 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	// telegramConfig := &telegram.TelegramConfig{
-	// 	Token: os.Getenv("TELEGRAM_TOKEN"),
-	// }
+	telegramConfig := &telegram.TelegramConfig{
+		Token: os.Getenv("TELEGRAM_TOKEN"),
+	}
 
-	// telegram, err := telegram.NewTelegramBot(telegramConfig)
-	// if err != nil {
-	// 	log.Fatalf("Error initializing Telegram bot: %v", err)
-	// }
+	telegram, err := telegram.NewTelegramBot(telegramConfig)
+	if err != nil {
+		log.Fatalf("Error initializing Telegram bot: %v", err)
+	}
 
-	// go telegram.Start()
+	go telegram.Start()
 	go crawler.StartCrawler()
 
 	go func() {

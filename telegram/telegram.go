@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-
 	"main/database"
 	logg "main/log"
 	"main/middlewares"
@@ -936,6 +935,9 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		userAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
 		user, e := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting user failed")
+		}
 		adId, e := strconv.Atoi(input)
 		if e != nil {
 			err = c.Send("آیدی آگهی نامعتبر است دوباره امتحان کنید")
@@ -967,26 +969,42 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 		}
 
 		userID := input
+		links := ""
 
 		gormUserAd := repository.NewGormUser_Ad(database.GetInstnace().Db)
 		gormUser := repository.NewGormUser(database.GetInstnace().Db)
+		gormAd := repository.NewGormAd(database.GetInstnace().Db)
 		user, e := gormUser.GetByTelegramId(strconv.Itoa(int(session.ChatID)))
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("finding user failed: ", e)
+
 		}
 		ads, e := gormUserAd.GetByUserId([]uint{user.ID})
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("getting user's ads failed: ", e)
 			return
 		}
+		bookmarkedIDs := []uint{}
 
-		links := ""
 		for _, ad := range ads {
 			if ad.IsBookmark {
-				links += fmt.Sprintf("%s\n", ad.Ad.UniqueId)
+				bookmarkedIDs = append(bookmarkedIDs, ad.AdId)
 			}
 		}
-		t.Loggers.InfoLogger.Println(links)
+		bAds, e := gormAd.GetById(bookmarkedIDs)
+		if e != nil {
+			t.Loggers.ErrorLogger.Println("getting bookmarked ads failed: ", e)
+		}
+		
+		for _, v := range bAds {
+			if v.Link == "divar" {
+				links += fmt.Sprintf("https://divar.ir/v%s\n", v.UniqueId)
+			} else {
+				links += fmt.Sprintf("https://sheypoor.com/v/%s\n", v.UniqueId)
+			}
+		}
+
+		links += "آگهی هایی که با شما به اشتراک گذاشته شده اند\n"
 		e = t.SendMessageToUser(userID, links)
 		if e != nil {
 			t.Loggers.ErrorLogger.Println("sharing bookmarks failed: ", e)
@@ -1047,6 +1065,7 @@ func (t *Telegram) handleText(c telebot.Context) (err error) {
 			t.Loggers.InfoLogger.Println("invalid user input for crawl time limit")
 			return
 		}
+
 		e := os.Setenv("TIMEOUT", input)
 		if e != nil {
 			err = e
